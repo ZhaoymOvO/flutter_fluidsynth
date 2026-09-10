@@ -20,7 +20,7 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
     final currentPath = fluidService.currentMidiPath;
     final isPlaying = fluidService.isPlaying;
     final isPaused = fluidService.isPaused;
-    final isStopped = fluidService.playbackState == PlaybackState.stopped;
+    final isStopped = fluidService.playbackState == FluidPlaybackState.stopped;
 
     // 1. Synchronize MediaItem (Metadata)
     if (currentPath != null && !isStopped) {

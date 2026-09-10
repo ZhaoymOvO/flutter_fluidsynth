@@ -10,7 +10,7 @@ import '../ffi/fluidsynth_bindings.dart';
 import '../ffi/fluidsynth_loader.dart';
 import 'midi_parser.dart';
 
-enum PlaybackState { stopped, playing, paused }
+enum FluidPlaybackState { stopped, playing, paused }
 
 enum LoopMode {
   none, // 不循環 (播完清單或單曲後停止)
@@ -43,7 +43,7 @@ class FluidSynthService extends ChangeNotifier {
 
   String? _currentMidiPath;
   String? _currentMidiTitle;
-  PlaybackState _playbackState = PlaybackState.stopped;
+  FluidPlaybackState _playbackState = FluidPlaybackState.stopped;
 
   List<String> _playlist = [];
   int _playlistIndex = -1;
@@ -76,9 +76,9 @@ class FluidSynthService extends ChangeNotifier {
 
   String? get currentMidiPath => _currentMidiPath;
   String? get currentMidiTitle => _currentMidiTitle;
-  PlaybackState get playbackState => _playbackState;
-  bool get isPlaying => _playbackState == PlaybackState.playing;
-  bool get isPaused => _playbackState == PlaybackState.paused;
+  FluidPlaybackState get playbackState => _playbackState;
+  bool get isPlaying => _playbackState == FluidPlaybackState.playing;
+  bool get isPaused => _playbackState == FluidPlaybackState.paused;
 
   List<String> get playlist => List.unmodifiable(_playlist);
   int get playlistIndex => _playlistIndex;
@@ -325,7 +325,7 @@ class FluidSynthService extends ChangeNotifier {
 
   Future<void> _teardownEngine() async {
     _stopProgressTimer();
-    _playbackState = PlaybackState.stopped;
+    _playbackState = FluidPlaybackState.stopped;
 
     final b = _bindings;
     if (b != null) {
@@ -435,7 +435,7 @@ class FluidSynthService extends ChangeNotifier {
     // If a MIDI track is currently playing, silence active notes and seek to current tick so new soundfont presets take effect cleanly
     if (_player != null &&
         _player != nullptr &&
-        _playbackState == PlaybackState.playing) {
+        _playbackState == FluidPlaybackState.playing) {
       b.fluidSynthAllSoundsOff(_synth!, -1);
       final tick = b.fluidPlayerGetCurrentTick(_player!);
       b.fluidPlayerSeek(_player!, tick);
@@ -521,7 +521,7 @@ class FluidSynthService extends ChangeNotifier {
 
     _currentMidiPath = midiPath;
     _currentMidiTitle = p.basename(midiPath);
-    _playbackState = PlaybackState.playing;
+    _playbackState = FluidPlaybackState.playing;
 
     final existingIdx = _playlist.indexWhere(
       (pItem) => p.equals(pItem, midiPath),
@@ -554,7 +554,7 @@ class FluidSynthService extends ChangeNotifier {
   /// Pause current playback
   void pause() {
     if (_bindings == null || _player == null || _player == nullptr) return;
-    if (_playbackState != PlaybackState.playing) return;
+    if (_playbackState != FluidPlaybackState.playing) return;
 
     final b = _bindings!;
     _currentTick = b.fluidPlayerGetCurrentTick(_player!);
@@ -567,7 +567,7 @@ class FluidSynthService extends ChangeNotifier {
     // Release audio pipeline occupation immediately on pause
     _stopAudioDriver();
 
-    _playbackState = PlaybackState.paused;
+    _playbackState = FluidPlaybackState.paused;
     _stopProgressTimer();
     notifyListeners();
   }
@@ -575,7 +575,7 @@ class FluidSynthService extends ChangeNotifier {
   /// Resume playback from paused position
   void resume() {
     if (_bindings == null || _player == null || _player == nullptr) return;
-    if (_playbackState != PlaybackState.paused) return;
+    if (_playbackState != FluidPlaybackState.paused) return;
 
     // Restart audio driver before resuming playback
     _startAudioDriver();
@@ -583,7 +583,7 @@ class FluidSynthService extends ChangeNotifier {
     final b = _bindings!;
     b.fluidPlayerSeek(_player!, _currentTick);
     b.fluidPlayerPlay(_player!);
-    _playbackState = PlaybackState.playing;
+    _playbackState = FluidPlaybackState.playing;
     _startProgressTimer();
     notifyListeners();
   }
@@ -608,7 +608,7 @@ class FluidSynthService extends ChangeNotifier {
       // Release audio pipeline occupation immediately on stop
       _stopAudioDriver();
     }
-    _playbackState = PlaybackState.stopped;
+    _playbackState = FluidPlaybackState.stopped;
     _currentTick = 0;
     notifyListeners();
   }
@@ -913,7 +913,7 @@ class FluidSynthService extends ChangeNotifier {
         // If playback is not active, release audio pipeline after note and reverberation fade
         if (!wasDriverActive) {
           Future.delayed(const Duration(milliseconds: 600), () {
-            if (_playbackState != PlaybackState.playing) {
+            if (_playbackState != FluidPlaybackState.playing) {
               _stopAudioDriver();
             }
           });
@@ -950,7 +950,7 @@ class FluidSynthService extends ChangeNotifier {
             }
           } else {
             playNext(autoAdvance: true).then((hasMore) {
-              if (!hasMore && _playbackState != PlaybackState.playing) {
+              if (!hasMore && _playbackState != FluidPlaybackState.playing) {
                 stop();
               }
             });

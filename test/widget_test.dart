@@ -147,7 +147,7 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       // Calling stop or pause before initialization or when stopped is safe and idempotent
       expect(() => service.stop(), returnsNormally);
       expect(() => service.pause(), returnsNormally);
-      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.playbackState, equals(FluidPlaybackState.stopped));
       expect(service.isAudioDriverActive, isFalse);
     });
 
@@ -318,7 +318,7 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       // Sequential playlist at last track with LoopMode.none
       final hasNext = await service.playNext(autoAdvance: true);
       expect(hasNext, isFalse);
-      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.playbackState, equals(FluidPlaybackState.stopped));
       expect(service.isAudioDriverActive, isFalse);
     });
 
@@ -330,7 +330,7 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       service.toggleShuffle();
       final hasNextSingle = await service.playNext(autoAdvance: true);
       expect(hasNextSingle, isFalse);
-      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.playbackState, equals(FluidPlaybackState.stopped));
       expect(service.isAudioDriverActive, isFalse);
     });
   });
@@ -487,12 +487,12 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       expect(handler.playbackState.value.playing, isFalse);
       expect(handler.playbackState.value.processingState, equals(AudioProcessingState.idle));
 
-      // Test pause and stop delegates
+      // Test pause and stop delegates (safe and idempotent when stopped)
       await expectLater(handler.pause(), completes);
-      expect(service.playbackState, equals(PlaybackState.paused));
+      expect(service.playbackState, equals(FluidPlaybackState.stopped));
 
       await expectLater(handler.stop(), completes);
-      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.playbackState, equals(FluidPlaybackState.stopped));
 
       // Test repeat mode delegate
       await handler.setRepeatMode(AudioServiceRepeatMode.one);
