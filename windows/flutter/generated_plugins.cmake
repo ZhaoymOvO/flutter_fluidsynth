@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audio_service_win
   dynamic_color
   permission_handler_windows
 )

@@ -1,9 +1,9 @@
 package com.ffs.ffs
 
 import android.util.Log
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     companion object {
         private const val TAG = "FluidSynthLoader"
 

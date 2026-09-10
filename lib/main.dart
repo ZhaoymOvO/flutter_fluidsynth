@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'i18n/i18n_service.dart';
+import 'services/audio_handler.dart';
 import 'services/file_service.dart';
 import 'services/fluidsynth_service.dart';
 import 'services/soundfont_service.dart';
@@ -63,6 +64,9 @@ void _initServicesAsync(
   if (soundFontService.activeSoundFontPath != null) {
     await fluidService.loadSoundFont(soundFontService.activeSoundFontPath!);
   }
+
+  // Initialize system media controls (Windows SMTC, Android MediaSession & Foreground Service, iOS/macOS Now Playing)
+  await initAudioService(fluidService);
 }
 
 class FluidMidiApp extends StatefulWidget {
@@ -95,9 +99,6 @@ class _FluidMidiAppState extends State<FluidMidiApp> {
         return AppExitResponse.exit;
       },
       onDetach: () {
-        widget.fluidService.stop();
-      },
-      onPause: () {
         widget.fluidService.stop();
       },
     );

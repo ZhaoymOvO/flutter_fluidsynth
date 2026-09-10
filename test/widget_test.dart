@@ -2,6 +2,8 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ffs/i18n/i18n_service.dart';
+import 'package:audio_service/audio_service.dart';
+import 'package:ffs/services/audio_handler.dart';
 import 'package:ffs/services/file_service.dart';
 import 'package:ffs/services/fluidsynth_service.dart';
 import 'package:ffs/services/midi_parser.dart';
@@ -464,6 +466,50 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
       expect(backCount, equals(5));
+    });
+  });
+
+  group('FluidAudioHandler & System Media Controls Tests', () {
+    test('seekSeconds handles valid seconds and edge cases gracefully', () {
+      final service = FluidSynthService();
+      // When uninitialized or no track loaded, seekSeconds should not throw
+      expect(() => service.seekSeconds(10.0), returnsNormally);
+      expect(() => service.seekSeconds(-5.0), returnsNormally);
+      expect(() => service.seekSeconds(double.nan), returnsNormally);
+      expect(() => service.seekSeconds(double.infinity), returnsNormally);
+    });
+
+    test('FluidAudioHandler delegates play, pause, stop, and skips cleanly to service', () async {
+      final service = FluidSynthService();
+      final handler = FluidAudioHandler(service);
+
+      // Verify initial state
+      expect(handler.playbackState.value.playing, isFalse);
+      expect(handler.playbackState.value.processingState, equals(AudioProcessingState.idle));
+
+      // Test pause and stop delegates
+      await expectLater(handler.pause(), completes);
+      expect(service.playbackState, equals(PlaybackState.paused));
+
+      await expectLater(handler.stop(), completes);
+      expect(service.playbackState, equals(PlaybackState.stopped));
+
+      // Test repeat mode delegate
+      await handler.setRepeatMode(AudioServiceRepeatMode.one);
+      expect(service.loopMode, equals(LoopMode.single));
+
+      await handler.setRepeatMode(AudioServiceRepeatMode.all);
+      expect(service.loopMode, equals(LoopMode.playlist));
+
+      await handler.setRepeatMode(AudioServiceRepeatMode.none);
+      expect(service.loopMode, equals(LoopMode.none));
+
+      // Test shuffle mode delegate
+      await handler.setShuffleMode(AudioServiceShuffleMode.all);
+      expect(service.isShuffle, isTrue);
+
+      await handler.setShuffleMode(AudioServiceShuffleMode.none);
+      expect(service.isShuffle, isFalse);
     });
   });
 }

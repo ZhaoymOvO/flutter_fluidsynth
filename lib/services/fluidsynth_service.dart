@@ -10,21 +10,22 @@ import '../ffi/fluidsynth_bindings.dart';
 import '../ffi/fluidsynth_loader.dart';
 import 'midi_parser.dart';
 
-enum PlaybackState {
-  stopped,
-  playing,
-  paused,
-}
+enum PlaybackState { stopped, playing, paused }
 
 enum LoopMode {
-  none,      // 不循環 (播完清單或單曲後停止)
-  playlist,  // 列表循環 (播完最後一首回到第一首)
-  single,    // 單曲循環 (單曲無限重複)
+  none, // 不循環 (播完清單或單曲後停止)
+  playlist, // 列表循環 (播完最後一首回到第一首)
+  single, // 單曲循環 (單曲無限重複)
 }
 
 class FluidSynthService extends ChangeNotifier {
   static const String _prefAudioDriverKey = 'fluidsynth_audio_driver';
   static const String _prefVolumeKey = 'fluidsynth_volume';
+
+  /// Maximum synth gain factor corresponding to 100% volume.
+  /// FluidSynth default gain is 0.2. A max gain of 0.5 provides clear output
+  /// while preventing clipping (破音) even with high-polyphony MIDI playback.
+  static const double maxGainFactor = 0.5;
 
   FluidSynthBindings? _bindings;
   Pointer<FluidSettings>? _settings;
@@ -56,7 +57,7 @@ class FluidSynthService extends ChangeNotifier {
   int _bpm = 120;
   int _division = 480;
   MidiFileInfo? _midiInfo;
-  double _volume = 0.8;
+  double _volume = 0.7;
   String _audioDriverName = 'auto';
 
   Timer? _progressTimer;
@@ -69,7 +70,8 @@ class FluidSynthService extends ChangeNotifier {
 
   int? get loadedSfId => _loadedSfId;
   String? get loadedSfPath => _loadedSfPath;
-  String? get loadedSfName => _loadedSfPath != null ? p.basename(_loadedSfPath!) : null;
+  String? get loadedSfName =>
+      _loadedSfPath != null ? p.basename(_loadedSfPath!) : null;
   bool get hasLoadedSoundFont => _loadedSfId != null && _loadedSfId! >= 0;
 
   String? get currentMidiPath => _currentMidiPath;
@@ -103,8 +105,13 @@ class FluidSynthService extends ChangeNotifier {
   int get bpm => _bpm;
   int get division => _division;
   double get volume => _volume;
+
+  /// Current master gain applied to FluidSynth (default ~0.35, max 0.5 to prevent clipping)
+  double get currentGain => (_volume * maxGainFactor).clamp(0.0, maxGainFactor);
+
   String get audioDriverName => _audioDriverName;
-  bool get isAudioDriverActive => _audioDriver != null && _audioDriver != nullptr;
+  bool get isAudioDriverActive =>
+      _audioDriver != null && _audioDriver != nullptr;
 
   /// Current playback position in seconds (calculated accurately using tempo map)
   double get currentTimeInSeconds {
@@ -157,7 +164,7 @@ class FluidSynthService extends ChangeNotifier {
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     _audioDriverName = prefs.getString(_prefAudioDriverKey) ?? 'auto';
-    _volume = prefs.getDouble(_prefVolumeKey) ?? 0.8;
+    _volume = (prefs.getDouble(_prefVolumeKey) ?? 0.7).clamp(0.0, 1.0);
 
     await _loadLibraryAndInitEngine();
   }
@@ -267,8 +274,8 @@ class FluidSynthService extends ChangeNotifier {
         return false;
       }
 
-      // Set initial gain
-      b.fluidSynthSetGain(_synth!, (_volume * 2.0));
+      // Set initial gain (scaled to prevent clipping/distortion)
+      b.fluidSynthSetGain(_synth!, currentGain);
 
       // Audio driver is created on-demand when playback starts,
       // avoiding idle occupation of the audio output pipeline and silent audio battery drain.
@@ -291,7 +298,9 @@ class FluidSynthService extends ChangeNotifier {
     try {
       _audioDriver = _bindings!.newFluidAudioDriver(_settings!, _synth!);
       if (_audioDriver == null || _audioDriver == nullptr) {
-        debugPrint('Warning: new_fluid_audio_driver returned null. Driver may be unavailable.');
+        debugPrint(
+          'Warning: new_fluid_audio_driver returned null. Driver may be unavailable.',
+        );
         return false;
       }
       return true;
@@ -328,7 +337,10 @@ class FluidSynthService extends ChangeNotifier {
         _player = null;
       }
 
-      if (_loadedSfId != null && _loadedSfId! >= 0 && _synth != null && _synth != nullptr) {
+      if (_loadedSfId != null &&
+          _loadedSfId! >= 0 &&
+          _synth != null &&
+          _synth != nullptr) {
         try {
           b.fluidSynthSfUnload(_synth!, _loadedSfId!, 1);
         } catch (_) {}
@@ -360,9 +372,11 @@ class FluidSynthService extends ChangeNotifier {
     if (!Platform.isWindows) return path;
     try {
       final kernel32 = DynamicLibrary.open('kernel32.dll');
-      final getShortPathName = kernel32.lookupFunction<
-          Uint32 Function(Pointer<Utf16>, Pointer<Utf16>, Uint32),
-          int Function(Pointer<Utf16>, Pointer<Utf16>, int)>('GetShortPathNameW');
+      final getShortPathName = kernel32
+          .lookupFunction<
+            Uint32 Function(Pointer<Utf16>, Pointer<Utf16>, Uint32),
+            int Function(Pointer<Utf16>, Pointer<Utf16>, int)
+          >('GetShortPathNameW');
       final pathPtr = path.toNativeUtf16();
       final buf = calloc<Uint16>(1024).cast<Utf16>();
       try {
@@ -419,7 +433,9 @@ class FluidSynthService extends ChangeNotifier {
     _loadedSfPath = filePath;
 
     // If a MIDI track is currently playing, silence active notes and seek to current tick so new soundfont presets take effect cleanly
-    if (_player != null && _player != nullptr && _playbackState == PlaybackState.playing) {
+    if (_player != null &&
+        _player != nullptr &&
+        _playbackState == PlaybackState.playing) {
       b.fluidSynthAllSoundsOff(_synth!, -1);
       final tick = b.fluidPlayerGetCurrentTick(_player!);
       b.fluidPlayerSeek(_player!, tick);
@@ -431,7 +447,11 @@ class FluidSynthService extends ChangeNotifier {
 
   /// Unload current SoundFont
   Future<void> unloadSoundFont() async {
-    if (_bindings != null && _synth != null && _synth != nullptr && _loadedSfId != null && _loadedSfId! >= 0) {
+    if (_bindings != null &&
+        _synth != null &&
+        _synth != nullptr &&
+        _loadedSfId != null &&
+        _loadedSfId! >= 0) {
       try {
         _bindings!.fluidSynthSfUnload(_synth!, _loadedSfId!, 1);
       } catch (e) {
@@ -469,7 +489,7 @@ class FluidSynthService extends ChangeNotifier {
     b.fluidSynthAllSoundsOff(_synth!, -1);
     b.fluidSynthAllNotesOff(_synth!, -1);
     b.fluidSynthSystemReset(_synth!);
-    b.fluidSynthSetGain(_synth!, (_volume * 2.0));
+    b.fluidSynthSetGain(_synth!, currentGain);
 
     // Ensure audio driver is active to output audio
     _startAudioDriver();
@@ -503,8 +523,9 @@ class FluidSynthService extends ChangeNotifier {
     _currentMidiTitle = p.basename(midiPath);
     _playbackState = PlaybackState.playing;
 
-    final existingIdx =
-        _playlist.indexWhere((pItem) => p.equals(pItem, midiPath));
+    final existingIdx = _playlist.indexWhere(
+      (pItem) => p.equals(pItem, midiPath),
+    );
     if (existingIdx >= 0) {
       _playlistIndex = existingIdx;
     } else {
@@ -582,7 +603,7 @@ class FluidSynthService extends ChangeNotifier {
         b.fluidSynthAllSoundsOff(_synth!, -1);
         b.fluidSynthAllNotesOff(_synth!, -1);
         b.fluidSynthSystemReset(_synth!);
-        b.fluidSynthSetGain(_synth!, (_volume * 2.0));
+        b.fluidSynthSetGain(_synth!, currentGain);
       }
       // Release audio pipeline occupation immediately on stop
       _stopAudioDriver();
@@ -602,10 +623,23 @@ class FluidSynthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Seek to a time position in seconds
+  void seekSeconds(double seconds) {
+    if (seconds.isNaN || seconds.isInfinite) return;
+    if (_midiInfo != null) {
+      seek(_midiInfo!.secondsToTick(seconds));
+    } else if (_division > 0 && _bpm > 0) {
+      final tick = (seconds * _bpm * _division / 60.0).round();
+      seek(tick);
+    }
+  }
+
   /// Set playlist of MIDI files
   void setPlaylist(List<String> paths, {int initialIndex = 0}) {
     _playlist = List<String>.from(paths);
-    _playlistIndex = _playlist.isEmpty ? -1 : initialIndex.clamp(0, _playlist.length - 1);
+    _playlistIndex = _playlist.isEmpty
+        ? -1
+        : initialIndex.clamp(0, _playlist.length - 1);
     _shuffleHistory.clear();
     if (_playlistIndex >= 0) {
       _shuffleHistory.add(_playlistIndex);
@@ -627,7 +661,10 @@ class FluidSynthService extends ChangeNotifier {
         break;
     }
     if (_bindings != null && _player != null && _player != nullptr) {
-      _bindings!.fluidPlayerSetLoop(_player!, _loopMode == LoopMode.single ? -1 : 1);
+      _bindings!.fluidPlayerSetLoop(
+        _player!,
+        _loopMode == LoopMode.single ? -1 : 1,
+      );
     }
     notifyListeners();
   }
@@ -636,7 +673,10 @@ class FluidSynthService extends ChangeNotifier {
   void setLoopMode(LoopMode mode) {
     _loopMode = mode;
     if (_bindings != null && _player != null && _player != nullptr) {
-      _bindings!.fluidPlayerSetLoop(_player!, _loopMode == LoopMode.single ? -1 : 1);
+      _bindings!.fluidPlayerSetLoop(
+        _player!,
+        _loopMode == LoopMode.single ? -1 : 1,
+      );
     }
     notifyListeners();
   }
@@ -808,7 +848,8 @@ class FluidSynthService extends ChangeNotifier {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
-    final currentItem = (_playlistIndex >= 0 && _playlistIndex < _playlist.length)
+    final currentItem =
+        (_playlistIndex >= 0 && _playlistIndex < _playlist.length)
         ? _playlist[_playlistIndex]
         : null;
 
@@ -843,12 +884,14 @@ class FluidSynthService extends ChangeNotifier {
   void setVolume(double vol) {
     _volume = vol.clamp(0.0, 1.0);
     if (_bindings != null && _synth != null && _synth != nullptr) {
-      _bindings!.fluidSynthSetGain(_synth!, (_volume * 2.0));
+      _bindings!.fluidSynthSetGain(_synth!, currentGain);
     }
     notifyListeners();
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setDouble(_prefVolumeKey, _volume);
-    }).catchError((_) {});
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          prefs.setDouble(_prefVolumeKey, _volume);
+        })
+        .catchError((_) {});
   }
 
   /// Test sound: Plays a middle C (60) note with velocity 100 for 400ms
