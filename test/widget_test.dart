@@ -644,10 +644,10 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
         expect(controls[4].customAction?.name, equals('toggleLoop'));
         expect(controls[4].androidIcon, equals('drawable/ic_repeat_all'));
 
-        // Compact indices: [Prev (1), Play/Pause (2), Next (3)]
+        // Compact indices: [Prev (0), Play/Pause (1), Next (2)] in nativeActions
         expect(
           handler.playbackState.value.androidCompactActionIndices,
-          equals([1, 2, 3]),
+          equals([0, 1, 2]),
         );
 
         // Test customAction('toggleShuffle')

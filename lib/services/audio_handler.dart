@@ -84,6 +84,9 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
     );
 
     // Standard 5-button layout: [Shuffle] [Prev] [Play/Pause] [Next] [Loop]
+    // Android AudioService filters out custom actions (toggleShuffle, toggleLoop) into customActions,
+    // leaving exactly 3 native actions: [0: Prev, 1: Play/Pause, 2: Next].
+    // Thus androidCompactActionIndices MUST be [0, 1, 2] to match the 3 native actions without index out of bounds.
     final controls = <MediaControl>[
       shuffleControl,
       MediaControl.skipToPrevious,
@@ -106,7 +109,7 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
           MediaAction.setShuffleMode,
           MediaAction.setRepeatMode,
         },
-        androidCompactActionIndices: const [1, 2, 3],
+        androidCompactActionIndices: const [0, 1, 2],
         processingState: isStopped
             ? AudioProcessingState.idle
             : AudioProcessingState.ready,
@@ -245,15 +248,12 @@ Future<AudioHandler?> initAudioService(
   I18nService? i18nService,
 }) async {
   try {
+    // Request notification permission asynchronously in background without blocking AudioService.init
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      try {
-        final notifStatus = await Permission.notification.status;
-        if (!notifStatus.isGranted) {
-          await Permission.notification.request();
-        }
-      } catch (e) {
+      Permission.notification.request().catchError((e) {
         debugPrint('Notification permission error: $e');
-      }
+        return PermissionStatus.denied;
+      });
     }
 
     return await AudioService.init(

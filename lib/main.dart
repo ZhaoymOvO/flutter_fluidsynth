@@ -57,6 +57,9 @@ void _initServicesAsync(
   FileService fileService,
   I18nService i18nService,
 ) async {
+  // Initialize system media controls immediately (Windows SMTC, Android MediaSession & Foreground Service, iOS/macOS Now Playing)
+  initAudioService(fluidService, i18nService: i18nService);
+
   // Scan home directory in background (fileService notifies listeners when complete)
   fileService.initialize();
 
@@ -65,9 +68,6 @@ void _initServicesAsync(
   if (soundFontService.activeSoundFontPath != null) {
     await fluidService.loadSoundFont(soundFontService.activeSoundFontPath!);
   }
-
-  // Initialize system media controls (Windows SMTC, Android MediaSession & Foreground Service, iOS/macOS Now Playing)
-  await initAudioService(fluidService, i18nService: i18nService);
 }
 
 class FluidMidiApp extends StatefulWidget {
