@@ -87,6 +87,24 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# FluidSynth runtime DLLs
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(FLUIDSYNTH_ARCH "x64")
+else()
+  set(FLUIDSYNTH_ARCH "x86")
+endif()
+
+set(FLUIDSYNTH_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fluidsynth/${FLUIDSYNTH_ARCH}/bin")
+set(FLUIDSYNTH_DLLS
+  "${FLUIDSYNTH_BIN_DIR}/libfluidsynth-3.dll"
+  "${FLUIDSYNTH_BIN_DIR}/SDL3.dll"
+  "${FLUIDSYNTH_BIN_DIR}/sndfile.dll"
+)
+
+install(FILES ${FLUIDSYNTH_DLLS}
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"

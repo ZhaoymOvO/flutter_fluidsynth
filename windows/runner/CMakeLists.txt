@@ -38,3 +38,20 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+# Copy FluidSynth runtime DLLs directly next to executable for debugging & running
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(FLUIDSYNTH_ARCH "x64")
+else()
+  set(FLUIDSYNTH_ARCH "x86")
+endif()
+
+set(FLUIDSYNTH_BIN_DIR "${CMAKE_SOURCE_DIR}/fluidsynth/${FLUIDSYNTH_ARCH}/bin")
+add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${FLUIDSYNTH_BIN_DIR}/libfluidsynth-3.dll"
+    "${FLUIDSYNTH_BIN_DIR}/SDL3.dll"
+    "${FLUIDSYNTH_BIN_DIR}/sndfile.dll"
+    "$<TARGET_FILE_DIR:${BINARY_NAME}>"
+  VERBATIM
+)

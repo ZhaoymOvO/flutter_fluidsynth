@@ -61,21 +61,54 @@ class FluidSynthLoader {
         final dirPtr = dir.toNativeUtf16();
         setDllDirectory(dirPtr);
         calloc.free(dirPtr);
+
+        // Preload dependent DLLs if they exist in the same directory
+        for (final dep in ['SDL3.dll', 'sndfile.dll']) {
+          final depPath = p.join(dir, dep);
+          if (File(depPath).existsSync()) {
+            try {
+              DynamicLibrary.open(depPath);
+            } catch (_) {}
+          }
+        }
       }
     } catch (e) {
       debugPrint('SetDllDirectoryW error: $e');
     }
   }
 
+  static void _setupAndroidDependencies() {
+    if (!Platform.isAndroid) return;
+    const deps = [
+      'libc++_shared.so',
+      'libogg.so',
+      'libopus.so',
+      'libFLAC.so',
+      'libvorbis.so',
+      'libvorbisenc.so',
+      'libvorbisfile.so',
+      'libsndfile.so',
+      'liboboe.so',
+      'libfluidsynth-assetloader.so',
+    ];
+    for (final dep in deps) {
+      try {
+        DynamicLibrary.open(dep);
+      } catch (_) {}
+    }
+  }
+
   static DynamicLibrary _openLibrary(String path) {
     if (Platform.isWindows) {
       _setupWindowsDllDirectory(path);
+    } else if (Platform.isAndroid) {
+      _setupAndroidDependencies();
     }
     return DynamicLibrary.open(path);
   }
 
   /// Attempts to load FluidSynth, checking sideloaded path first,
-  /// then fallback default / system paths.
+  /// then fallback default / platform system paths.
   static Future<FluidSynthLoadResult> load({String? customPath}) async {
     final sideloaded = customPath ?? await getSideloadedPath();
 
@@ -122,6 +155,23 @@ class FluidSynthLoader {
       }
     }
 
+    // 3. On iOS, try DynamicLibrary.process() for embedded / statically linked frameworks
+    if (Platform.isIOS) {
+      try {
+        final lib = DynamicLibrary.process();
+        final bindings = FluidSynthBindings(lib);
+        final versionPtr = bindings.fluidVersionStr();
+        final version = versionPtr.toDartString();
+        return FluidSynthLoadResult.success(
+          bindings: bindings,
+          loadedPath: 'DynamicLibrary.process()',
+          version: version,
+        );
+      } catch (e) {
+        errors.add('DynamicLibrary.process(): $e');
+      }
+    }
+
     return FluidSynthLoadResult.failure(
       errorMessage: 'FluidSynth library could not be found.\nAttempted paths:\n${errors.join('\n')}',
     );
@@ -148,12 +198,16 @@ class FluidSynthLoader {
         p.join(exeDir, 'bin', 'libfluidsynth-3.dll'),
         p.join(exeDir, 'bin', 'fluidsynth.dll'),
 
-        // 2. System PATH bare names
+        // 2. Project workspace local paths during tests/dev
+        p.join(Directory.current.path, 'windows', 'fluidsynth', 'x64', 'bin', 'libfluidsynth-3.dll'),
+        p.join(Directory.current.path, 'windows', 'fluidsynth', 'x86', 'bin', 'libfluidsynth-3.dll'),
+
+        // 3. System PATH bare names
         'libfluidsynth-3.dll',
         'fluidsynth.dll',
         'libfluidsynth.dll',
 
-        // 3. Common installation paths
+        // 4. Common installation paths
         r'C:\Program Files\FluidSynth\bin\libfluidsynth-3.dll',
         r'C:\Program Files\FluidSynth\bin\fluidsynth.dll',
         r'C:\Program Files (x86)\FluidSynth\bin\libfluidsynth-3.dll',
@@ -176,10 +230,14 @@ class FluidSynthLoader {
     } else if (Platform.isAndroid) {
       return [
         'libfluidsynth.so',
+        'libfluidsynth.so.3',
+        'fluidsynth',
       ];
     } else if (Platform.isIOS) {
       return [
+        'FluidSynth.framework/FluidSynth',
         'fluidsynth.framework/fluidsynth',
+        'FluidSynth',
         'libfluidsynth.dylib',
       ];
     }

@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ffs/i18n/i18n_service.dart';
@@ -142,6 +143,29 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       expect(() => service.stop(), returnsNormally);
       expect(() => service.pause(), returnsNormally);
       expect(service.playbackState, equals(PlaybackState.stopped));
+    });
+
+    test('Bundled FluidSynth native binaries exist for Android, Windows, and iOS', () {
+      // Android
+      final androidAbis = ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'];
+      for (final abi in androidAbis) {
+        final libPath = 'android/app/src/main/jniLibs/$abi/libfluidsynth.so';
+        expect(File(libPath).existsSync(), isTrue, reason: 'Missing $libPath');
+      }
+
+      // Windows
+      for (final arch in ['x64', 'x86']) {
+        final dllPath = 'windows/fluidsynth/$arch/bin/libfluidsynth-3.dll';
+        final sdlPath = 'windows/fluidsynth/$arch/bin/SDL3.dll';
+        final sndPath = 'windows/fluidsynth/$arch/bin/sndfile.dll';
+        expect(File(dllPath).existsSync(), isTrue, reason: 'Missing $dllPath');
+        expect(File(sdlPath).existsSync(), isTrue, reason: 'Missing $sdlPath');
+        expect(File(sndPath).existsSync(), isTrue, reason: 'Missing $sndPath');
+      }
+
+      // iOS
+      final xcframeworkPath = 'ios/Frameworks/FluidSynth/FluidSynth.xcframework';
+      expect(Directory(xcframeworkPath).existsSync(), isTrue, reason: 'Missing $xcframeworkPath');
     });
   });
 

@@ -22,12 +22,51 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.ffs.ffs"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // FluidSynth Android 24 release requires minimum SDK 24
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        externalNativeBuild {
+            cmake {
+                arguments("-DANDROID_STL=c++_shared")
+            }
+        }
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts.addAll(listOf(
+                "**/libfluidsynth.so",
+                "**/libfluidsynth-assetloader.so",
+                "**/liboboe.so",
+                "**/libsndfile.so",
+                "**/libFLAC.so",
+                "**/libogg.so",
+                "**/libopus.so",
+                "**/libvorbis.so",
+                "**/libvorbisenc.so",
+                "**/libvorbisfile.so",
+                "**/libc++_shared.so"
+            ))
+        }
     }
 
     buildTypes {

@@ -8,6 +8,7 @@
     <application
         android:label="FluidMIDI"
         android:requestLegacyExternalStorage="true"
+        android:extractNativeLibs="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
