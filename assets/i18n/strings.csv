@@ -1,0 +1,90 @@
+control_name,zh_TW,zh_CN,en,ja
+app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プレーヤー
+common_ok,確定,确定,OK,確定
+common_cancel,取消,取消,Cancel,キャンセル
+common_close,關閉,关闭,Close,閉じる
+common_error,錯誤,错误,Error,エラー
+common_warning,警告,警告,Warning,警告
+common_success,成功,成功,Success,成功
+common_loading,載入中...,加载中...,Loading...,読み込み中...
+
+home_tab_browser,檔案瀏覽,文件浏览,File Browser,ファイルブラウザ
+home_tab_soundfonts,SoundFont 庫,SoundFont 库,SoundFonts,サウンドフォント
+home_tab_settings,設定與動態庫,设置与动态库,Settings & Library,設定とライブラリ
+home_title,家目錄音樂檔案,家目录音乐文件,Home Music Files,ホームの音楽ファイル
+home_path_label,當前路徑,当前路径,Current Path,現在のパス
+home_btn_home,家目錄,家目录,Home Directory,ホームディレクトリ
+home_btn_volumes,儲存裝置 / 外接硬碟,存储设备 / 外接硬盘,Storage / External Drives,ストレージ / 外付けドライブ
+home_btn_parent_dir,上一層目錄,上一层目录,Parent Directory,上のフォルダへ
+home_btn_refresh,重新整理,刷新,Refresh,更新
+home_btn_request_permission,申請儲存讀取權限,申请存储读取权限,Request Storage Permission,ストレージ権限をリクエスト
+home_permission_denied,未能取得家目錄讀取權限，請於系統設定中開啟權限,未能取得家目录读取权限，请在系统设置中开启权限,Failed to access home directory. Please grant permission in settings.,ホームディレクトリへのアクセスが拒否されました。設定で権限を許可してください。
+home_no_files_found,在家目錄中未找到任何 MIDI 或 SoundFont 檔案,在家目录中未找到任何 MIDI 或 SoundFont 文件,No MIDI or SoundFont files found in home directory,ホームディレクトリ内に MIDI または SoundFont ファイルが見つかりませんでした
+home_item_badge_directory,資料夾,文件夹,Folder,フォルダ
+home_item_badge_midi,MIDI 音樂,MIDI 音乐,MIDI File,MIDIファイル
+home_item_badge_soundfont,音色庫,音色库,SoundFont,サウンドフォント
+home_tip_click_midi,點擊 MIDI 檔案即可開始播放,点击 MIDI 文件即可开始播放,Tap a MIDI file to start playback,タップして MIDI を再生
+home_tip_click_soundfont,點擊 SoundFont 檔案即可儲存至已知清單,点击 SoundFont 文件即可保存至已知列表,Tap a SoundFont to save to known list,タップしてサウンドフォントを登録
+home_prompt_select_soundfont,請先載入 SoundFont (音色庫) 方可播放 MIDI 音樂,请先加载 SoundFont (音色库) 才能播放 MIDI 音乐,Please select or load a SoundFont before playing MIDI,MIDI を再生する前にサウンドフォントを選択してください
+home_btn_play_single,僅播放此曲目（清空播放列表）,仅播放此曲目（清空播放列表）,Play This Track (Clear Playlist),この曲のみ再生（リストをクリア）
+home_btn_play_playlist,播放並載入當前目錄,播放并载入当前目录,Play & Load Folder,再生してフォルダを読み込む
+home_btn_add_next,加入下一首播放,添加到下一首播放,Play Next,次に再生
+home_toast_added_next,已加入下一首播放,已添加到下一首播放,Added to play next,次に再生に追加しました
+
+player_title_now_playing,正在播放,正在播放,Now Playing,再生中
+player_no_track,尚未選擇 MIDI 檔案,尚未选择 MIDI 文件,No MIDI track selected,曲が選択されていません
+player_active_soundfont,當前音色庫,当前音色库,Active SoundFont,現在のサウンドフォント
+player_no_soundfont,未加載 SoundFont,未加载 SoundFont,No SoundFont Loaded,サウンドフォント未読み込み
+player_btn_play,播放,播放,Play,再生
+player_btn_pause,暫停,暂停,Pause,一時停止
+player_btn_stop,停止,停止,Stop,停止
+player_btn_prev,上一首,上一首,Previous Track,前の曲
+player_btn_next,下一首,下一首,Next Track,次の曲
+player_btn_shuffle_on,隨機播放：開啟,随机播放：开启,Shuffle: On,シャッフル：オン
+player_btn_shuffle_off,隨機播放：關閉,随机播放：关闭,Shuffle: Off,シャッフル：オフ
+player_loop_none,循環模式：不循環,循环模式：不循环,Loop: Off,リピート：オフ
+player_loop_playlist,循環模式：列表循環,循环模式：列表循环,Loop: Playlist,リピート：リスト
+player_loop_single,循環模式：單曲循環,循环模式：单曲循环,Loop: Single Track,リピート：1曲
+player_btn_loop_on,已開啟循環播放,已开启循环播放,Loop Enabled,リピート有効
+player_btn_loop_off,已關閉循環播放,已关闭循环播放,Loop Disabled,リピート無効
+player_volume_label,音量,音量,Volume,音量
+player_btn_playlist,播放列表,播放列表,Playlist,再生リスト
+playlist_title,播放列表,播放列表,Playlist,再生リスト
+playlist_empty,播放列表為空,播放列表为空,Playlist is empty,再生リストは空です
+playlist_clear,清空列表,清空列表,Clear Playlist,リストをクリア
+playlist_tracks_count,首曲目,首曲目,tracks,曲
+player_status_playing,播放中,播放中,Playing,再生中
+player_status_paused,已暫停,已暂停,Paused,一時停止中
+player_status_stopped,已停止,已停止,Stopped,停止中
+
+sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFonts,登録済みサウンドフォント
+sf_manager_subtitle,點選以切換為當前使用的音色庫,点击以切换为当前使用的音色库,Tap to switch the active SoundFont,タップしてサウンドフォントを切り替え
+sf_empty_list,尚無已知的 SoundFont。請從首頁點選 .sf2 檔案或手動新增。,尚无已知的 SoundFont。请从首页点击 .sf2 文件或手动添加。,No known SoundFonts yet. Tap a .sf2 file in Home or add manually.,サウンドフォントが登録されていません。ホームから追加してください。
+sf_btn_add_manual,手動選取 SoundFont 檔案,手动选取 SoundFont 文件,Pick SoundFont File,ファイルから追加
+sf_status_active,使用中,使用中,Active,使用中
+sf_btn_set_active,設為使用中,设为使用中,Set Active,有効化
+sf_btn_remove,從清單移除,从列表移除,Remove,削除
+sf_toast_added,已將 SoundFont 加入已知清單並啟用,已将 SoundFont 添加到已知列表并启用,SoundFont added to known list and activated,サウンドフォントを登録して有効化しました
+sf_toast_switched,已切換當前 SoundFont,已切换当前 SoundFont,Switched active SoundFont,サウンドフォントを切り替えました
+sf_toast_removed,已從已知清單移除 SoundFont,已从已知列表移除 SoundFont,Removed SoundFont from list,サウンドフォントを削除しました
+sf_load_error,加載 SoundFont 失敗，請確認檔案格式是否正確,加载 SoundFont 失败，请确认文件格式是否正确,Failed to load SoundFont. Please verify file format.,サウンドフォントの読み込みに失敗しました
+
+settings_page_title,軟體設定與庫管理,软件设置与库管理,Settings & Library,設定とライブラリ管理
+settings_section_lib,FluidSynth 動態庫狀態,FluidSynth 动态库状态,FluidSynth Library Status,FluidSynth ライブラリの状態
+settings_lib_status_loaded,已成功載入動態庫,已成功加载动态库,Library Loaded Successfully,ライブラリは正常に読み込まれました
+settings_lib_status_failed,未載入動態庫，請手動旁加載,未加载动态库，请手动旁加载,Library Not Loaded. Please Sideload.,ライブラリが未読み込みです。手動で読み込んでください。
+settings_lib_path,載入路徑,加载路径,Library Path,読み込みパス
+settings_lib_version,庫版本號,库版本号,Library Version,ライブラリバージョン
+settings_lib_sideload_btn,手動旁加載 FluidSynth 庫,手动旁加载 FluidSynth 库,Sideload FluidSynth Library,FluidSynthを手動読み込み
+settings_lib_sideload_tip,支援選取 .dll (Win) / .dylib (macOS) / .so (Linux/Android),支持选取 .dll (Win) / .dylib (macOS) / .so (Linux/Android),Supports .dll (Win) / .dylib (macOS) / .so (Linux/Android),.dll (Win) / .dylib (macOS) / .so (Linux/Android) を選択可能
+settings_lib_reset_btn,恢復預設 / 內置庫路徑,恢复默认 / 内置库路径,Reset to Default / Bundled Library,デフォルトに戻す
+settings_section_audio,音訊驅動設置,音频驱动设置,Audio Driver Settings,オーディオドライバ設定
+settings_audio_driver_label,音訊驅動類型,音频驱动类型,Audio Driver,オーディオドライバ
+settings_btn_test_sound,發聲測試 (Play C4),发声测试 (Play C4),Test Sound (Play C4),サウンドテスト (Play C4)
+settings_test_sound_success,已發送測試音符,已发送测试音符,Test note sent successfully,テスト音を送信しました
+settings_test_sound_failed,發聲測試失敗，請檢查庫與 SoundFont,发声测试失败，请检查库与 SoundFont,Sound test failed. Check library and SoundFont.,サウンドテストに失敗しました
+settings_section_i18n,語言與本地化適配,语言与本地化适配,Language & Localization,言語とローカライズ
+settings_language_label,介面語言,界面语言,Interface Language,インターフェース言語
+settings_lang_auto,跟隨系統,跟随系统,System Default,システムに従う
+settings_i18n_show_keys,本地化適配模式：直接顯示控件名稱,本地化适配模式：直接显示控件名称,Adaptation Mode: Show Control Names Directly,適応モード：コントロール名を直接表示
+settings_i18n_show_keys_desc,開啟後介面將直接顯示 CSV 中的 control_name，方便對照與調試,开启后界面将直接显示 CSV 中的 control_name，方便对照与调试,Displays CSV control_name in UI to facilitate verification and mapping,UIにCSVのcontrol_nameを表示し、翻訳や調整を容易にします

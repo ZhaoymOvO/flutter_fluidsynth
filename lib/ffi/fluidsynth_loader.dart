@@ -1,0 +1,139 @@
+import 'dart:ffi';
+import 'dart:io';
+import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'fluidsynth_bindings.dart';
+
+class FluidSynthLoadResult {
+  final bool isSuccess;
+  final FluidSynthBindings? bindings;
+  final String? loadedPath;
+  final String? version;
+  final String? errorMessage;
+
+  FluidSynthLoadResult.success({
+    required this.bindings,
+    required this.loadedPath,
+    required this.version,
+  })  : isSuccess = true,
+        errorMessage = null;
+
+  FluidSynthLoadResult.failure({
+    required this.errorMessage,
+  })  : isSuccess = false,
+        bindings = null,
+        loadedPath = null,
+        version = null;
+}
+
+class FluidSynthLoader {
+  static const String prefSideloadPathKey = 'fluidsynth_sideload_lib_path';
+
+  /// Get the saved sideloaded library path if any
+  static Future<String?> getSideloadedPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(prefSideloadPathKey);
+  }
+
+  /// Save the sideloaded library path
+  static Future<void> saveSideloadedPath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(prefSideloadPathKey, path);
+  }
+
+  /// Clear the sideloaded library path
+  static Future<void> clearSideloadedPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(prefSideloadPathKey);
+  }
+
+  /// Attempts to load FluidSynth, checking sideloaded path first,
+  /// then fallback default / system paths.
+  static Future<FluidSynthLoadResult> load({String? customPath}) async {
+    final sideloaded = customPath ?? await getSideloadedPath();
+
+    // 1. If user provided a sideloaded path, test it first
+    if (sideloaded != null && sideloaded.isNotEmpty) {
+      try {
+        final lib = DynamicLibrary.open(sideloaded);
+        final bindings = FluidSynthBindings(lib);
+        final versionPtr = bindings.fluidVersionStr();
+        final version = versionPtr.toDartString();
+        return FluidSynthLoadResult.success(
+          bindings: bindings,
+          loadedPath: sideloaded,
+          version: version,
+        );
+      } catch (e) {
+        debugPrint('Failed to load sideloaded library ($sideloaded): $e');
+        // If an explicit custom path was specified, report failure immediately
+        if (customPath != null) {
+          return FluidSynthLoadResult.failure(
+            errorMessage: 'Failed to load sideloaded library from $sideloaded: $e',
+          );
+        }
+      }
+    }
+
+    // 2. Try default bundled / platform system paths
+    final candidatePaths = _getCandidatePaths();
+    final errors = <String>[];
+
+    for (final path in candidatePaths) {
+      try {
+        final lib = DynamicLibrary.open(path);
+        final bindings = FluidSynthBindings(lib);
+        final versionPtr = bindings.fluidVersionStr();
+        final version = versionPtr.toDartString();
+        return FluidSynthLoadResult.success(
+          bindings: bindings,
+          loadedPath: path,
+          version: version,
+        );
+      } catch (e) {
+        errors.add('$path: $e');
+      }
+    }
+
+    return FluidSynthLoadResult.failure(
+      errorMessage: 'FluidSynth library could not be found.\nAttempted paths:\n${errors.join('\n')}',
+    );
+  }
+
+  static List<String> _getCandidatePaths() {
+    if (Platform.isMacOS) {
+      return [
+        '/opt/homebrew/lib/libfluidsynth.dylib',
+        '/opt/homebrew/lib/libfluidsynth.3.dylib',
+        '/usr/local/lib/libfluidsynth.dylib',
+        'libfluidsynth.dylib',
+        '@rpath/libfluidsynth.dylib',
+      ];
+    } else if (Platform.isWindows) {
+      return [
+        'fluidsynth.dll',
+        'libfluidsynth-3.dll',
+        'libfluidsynth.dll',
+      ];
+    } else if (Platform.isLinux) {
+      return [
+        'libfluidsynth.so.3',
+        'libfluidsynth.so',
+        '/usr/lib/libfluidsynth.so.3',
+        '/usr/lib/x86_64-linux-gnu/libfluidsynth.so.3',
+        '/usr/lib/aarch64-linux-gnu/libfluidsynth.so.3',
+      ];
+    } else if (Platform.isAndroid) {
+      return [
+        'libfluidsynth.so',
+      ];
+    } else if (Platform.isIOS) {
+      return [
+        'fluidsynth.framework/fluidsynth',
+        'libfluidsynth.dylib',
+      ];
+    }
+    return ['fluidsynth'];
+  }
+}
