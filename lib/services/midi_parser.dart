@@ -45,7 +45,8 @@ class MidiFileInfo {
     }
 
     final deltaTicks = tick - current.tick;
-    final additionalSeconds = (deltaTicks * current.microsecondsPerBeat) / (division * 1000000.0);
+    final additionalSeconds =
+        (deltaTicks * current.microsecondsPerBeat) / (division * 1000000.0);
     return current.timeInSeconds + additionalSeconds;
   }
 
@@ -66,7 +67,8 @@ class MidiFileInfo {
     }
 
     final deltaSeconds = seconds - current.timeInSeconds;
-    final deltaTicks = (deltaSeconds * division * 1000000.0) / current.microsecondsPerBeat;
+    final deltaTicks =
+        (deltaSeconds * division * 1000000.0) / current.microsecondsPerBeat;
     return (current.tick + deltaTicks).round();
   }
 
@@ -75,27 +77,51 @@ class MidiFileInfo {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        return const MidiFileInfo(division: 480, tempoPoints: [], format: 1, trackCount: 1);
+        return const MidiFileInfo(
+          division: 480,
+          tempoPoints: [],
+          format: 1,
+          trackCount: 1,
+        );
       }
       final bytes = await file.readAsBytes();
       return parseBytes(bytes);
     } catch (_) {
-      return const MidiFileInfo(division: 480, tempoPoints: [], format: 1, trackCount: 1);
+      return const MidiFileInfo(
+        division: 480,
+        tempoPoints: [],
+        format: 1,
+        trackCount: 1,
+      );
     }
   }
 
   /// Parses a MIDI file from raw bytes
   static MidiFileInfo parseBytes(Uint8List bytes) {
     if (bytes.length < 14) {
-      return const MidiFileInfo(division: 480, tempoPoints: [], format: 1, trackCount: 1);
+      return const MidiFileInfo(
+        division: 480,
+        tempoPoints: [],
+        format: 1,
+        trackCount: 1,
+      );
     }
 
     // Header Chunk 'MThd'
-    if (bytes[0] != 0x4D || bytes[1] != 0x54 || bytes[2] != 0x68 || bytes[3] != 0x64) {
-      return const MidiFileInfo(division: 480, tempoPoints: [], format: 1, trackCount: 1);
+    if (bytes[0] != 0x4D ||
+        bytes[1] != 0x54 ||
+        bytes[2] != 0x68 ||
+        bytes[3] != 0x64) {
+      return const MidiFileInfo(
+        division: 480,
+        tempoPoints: [],
+        format: 1,
+        trackCount: 1,
+      );
     }
 
-    final headerLen = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
+    final headerLen =
+        (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
     final format = (bytes[8] << 8) | bytes[9];
     final tracks = (bytes[10] << 8) | bytes[11];
     int division = (bytes[12] << 8) | bytes[13];
@@ -118,7 +144,8 @@ class MidiFileInfo {
           bytes[offset + 2] == 0x72 &&
           bytes[offset + 3] == 0x6B) {
         // 'MTrk' chunk
-        final trackLen = (bytes[offset + 4] << 24) |
+        final trackLen =
+            (bytes[offset + 4] << 24) |
             (bytes[offset + 5] << 16) |
             (bytes[offset + 6] << 8) |
             bytes[offset + 7];
@@ -160,7 +187,8 @@ class MidiFileInfo {
 
             if (metaType == 0x51 && metaLen == 3 && ptr + 3 <= trackEnd) {
               // Set Tempo: 3 bytes microseconds per quarter note
-              final mpq = (bytes[ptr] << 16) | (bytes[ptr + 1] << 8) | bytes[ptr + 2];
+              final mpq =
+                  (bytes[ptr] << 16) | (bytes[ptr + 1] << 8) | bytes[ptr + 2];
               rawEvents.add(_RawTempoEvent(currentTick, mpq));
             }
 
@@ -201,20 +229,29 @@ class MidiFileInfo {
     int currentMpq = 500000; // default 120 BPM
 
     if (rawEvents.isEmpty || rawEvents.first.tick > 0) {
-      points.add(TempoPoint(tick: 0, microsecondsPerBeat: currentMpq, timeInSeconds: 0.0));
+      points.add(
+        TempoPoint(
+          tick: 0,
+          microsecondsPerBeat: currentMpq,
+          timeInSeconds: 0.0,
+        ),
+      );
     }
 
     for (var ev in rawEvents) {
       if (ev.tick > lastTick) {
-        accumulatedSeconds += ((ev.tick - lastTick) * currentMpq) / (division * 1000000.0);
+        accumulatedSeconds +=
+            ((ev.tick - lastTick) * currentMpq) / (division * 1000000.0);
         lastTick = ev.tick;
       }
       currentMpq = ev.microsecondsPerBeat;
-      points.add(TempoPoint(
-        tick: ev.tick,
-        microsecondsPerBeat: currentMpq,
-        timeInSeconds: accumulatedSeconds,
-      ));
+      points.add(
+        TempoPoint(
+          tick: ev.tick,
+          microsecondsPerBeat: currentMpq,
+          timeInSeconds: accumulatedSeconds,
+        ),
+      );
     }
 
     return MidiFileInfo(

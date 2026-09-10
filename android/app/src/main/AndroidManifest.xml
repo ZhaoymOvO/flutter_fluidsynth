@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:label="FluidMIDI"
+        android:label="SynthBox"
         android:requestLegacyExternalStorage="true"
         android:extractNativeLibs="true"
         android:name="${applicationName}"

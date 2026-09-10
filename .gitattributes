@@ -1,0 +1,74 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# ------------------------------------------------------------------------------
+# Compiled binaries, libraries & archives
+# ------------------------------------------------------------------------------
+*.so linguist-vendored vendored
+*.dll linguist-vendored vendored
+*.dylib linguist-vendored vendored
+*.exe linguist-vendored vendored
+*.a linguist-vendored vendored
+*.lib linguist-vendored vendored
+*.o linguist-vendored vendored
+*.obj linguist-vendored vendored
+
+*.class linguist-vendored vendored
+*.dex linguist-vendored vendored
+*.jar linguist-vendored vendored
+*.aar linguist-vendored vendored
+*.apk linguist-vendored vendored
+*.aab linguist-vendored vendored
+*.ipa linguist-vendored vendored
+
+*.framework/** linguist-vendored vendored
+*.xcframework/** linguist-vendored vendored
+*.dSYM/** linguist-vendored vendored
+
+*.zip linguist-vendored vendored
+*.tar linguist-vendored vendored
+*.tar.gz linguist-vendored vendored
+*.tgz linguist-vendored vendored
+
+# ------------------------------------------------------------------------------
+# Prebuilt vendor libraries (FluidSynth, SDL, SndFile, Oboe, etc.)
+# ------------------------------------------------------------------------------
+android/app/src/main/jniLibs/** linguist-vendored vendored
+ios/Frameworks/** linguist-vendored vendored
+windows/fluidsynth/** linguist-vendored vendored
+
+# ------------------------------------------------------------------------------
+# Dart / Flutter / Pub packages, lockfiles & dependencies
+# ------------------------------------------------------------------------------
+pubspec.lock linguist-vendored vendored
+.dart_tool/** linguist-vendored vendored
+.flutter-plugins linguist-vendored vendored
+.flutter-plugins-dependencies linguist-vendored vendored
+.pub-cache/** linguist-vendored vendored
+.pub/** linguist-vendored vendored
+
+# ------------------------------------------------------------------------------
+# Native package managers (CocoaPods, Gradle wrapper)
+# ------------------------------------------------------------------------------
+**/Pods/** linguist-vendored vendored
+**/Podfile.lock linguist-vendored vendored
+Podfile.lock linguist-vendored vendored
+**/gradle/wrapper/gradle-wrapper.jar linguist-vendored vendored
+**/.gradle/** linguist-vendored vendored
+
+# ------------------------------------------------------------------------------
+# Build outputs & generated Flutter plugin files
+# ------------------------------------------------------------------------------
+build/** linguist-vendored vendored
+**/build/** linguist-vendored vendored
+.build/** linguist-vendored vendored
+coverage/** linguist-vendored vendored
+**/coverage/** linguist-vendored vendored
+**/doc/api/** linguist-vendored vendored
+**/ephemeral/** linguist-vendored vendored
+
+**/GeneratedPluginRegistrant.* linguist-vendored vendored
+**/generated_plugin_registrant.* linguist-vendored vendored
+**/generated_plugins.cmake linguist-vendored vendored
+**/Flutter/Generated.xcconfig linguist-vendored vendored
+**/Flutter/flutter_export_environment.sh linguist-vendored vendored

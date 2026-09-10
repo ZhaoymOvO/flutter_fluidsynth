@@ -1,17 +1,49 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import '../i18n/i18n_service.dart';
 import '../services/fluidsynth_service.dart';
+import '../services/soundfont_service.dart';
+import 'soundfont_dialog.dart';
 
 class SettingsPage extends StatelessWidget {
   final FluidSynthService fluidService;
+  final SoundFontService soundFontService;
   final I18nService i18nService;
 
   const SettingsPage({
     super.key,
     required this.fluidService,
+    required this.soundFontService,
     required this.i18nService,
   });
+
+  Future<void> _pickSoundFont(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['sf2', 'sf3', 'dls'],
+      dialogTitle: context.tr('sf_btn_add_manual'),
+    );
+
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      final added = await soundFontService.addAndActivateSoundFont(path);
+      if (added && fluidService.isLibraryLoaded) {
+        await fluidService.loadSoundFont(path);
+      }
+      if (context.mounted) {
+        if (added) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(context.tr('sf_toast_added'))));
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(context.tr('sf_load_error'))));
+        }
+      }
+    }
+  }
 
   Future<void> _sideloadLibrary(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
@@ -72,21 +104,18 @@ class SettingsPage extends StatelessWidget {
         elevation: 0,
       ),
       body: ListenableBuilder(
-        listenable: Listenable.merge([fluidService, i18nService]),
+        listenable: Listenable.merge([
+          fluidService,
+          soundFontService,
+          i18nService,
+        ]),
         builder: (context, _) {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               // Section 1: FluidSynth Library Status & Sideload
               _buildSectionHeader(context, context.tr('settings_section_lib')),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: theme.dividerColor.withValues(alpha: 0.4),
-                  ),
-                ),
+              Card.outlined(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -139,13 +168,13 @@ class SettingsPage extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.08),
+                            color: theme.colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             fluidService.loadError!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.red.shade700,
+                              color: theme.colorScheme.onErrorContainer,
                               fontFamily: 'monospace',
                             ),
                           ),
@@ -191,10 +220,14 @@ class SettingsPage extends StatelessWidget {
                                   onPressed: () async {
                                     await fluidService.resetToDefaultLibrary();
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            context.tr('settings_lib_reset_btn'),
+                                            context.tr(
+                                              'settings_lib_reset_btn',
+                                            ),
                                           ),
                                         ),
                                       );
@@ -213,19 +246,131 @@ class SettingsPage extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Section 2: Audio Driver & Volume
+              // Section 2: SoundFont (音色庫切換)
+              _buildSectionHeader(context, context.tr('home_tab_soundfonts')),
+              Card.outlined(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (soundFontService.knownSoundFonts.isNotEmpty) ...[
+                        _buildAdaptiveDropdownTile<String>(
+                          context: context,
+                          icon: const Icon(Icons.piano_rounded),
+                          label: context.tr('player_active_soundfont'),
+                          value:
+                              soundFontService.activeSoundFontPath != null &&
+                                  soundFontService.knownSoundFonts.any(
+                                    (sf) => p.equals(
+                                      sf.path,
+                                      soundFontService.activeSoundFontPath!,
+                                    ),
+                                  )
+                              ? soundFontService.knownSoundFonts
+                                    .firstWhere(
+                                      (sf) => p.equals(
+                                        sf.path,
+                                        soundFontService.activeSoundFontPath!,
+                                      ),
+                                    )
+                                    .path
+                              : soundFontService.knownSoundFonts.first.path,
+                          items: soundFontService.knownSoundFonts
+                              .map(
+                                (sf) => DropdownMenuEntry<String>(
+                                  value: sf.path,
+                                  label: sf.name,
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (newPath) async {
+                            if (newPath != null) {
+                              await soundFontService.setActiveSoundFont(
+                                newPath,
+                              );
+                              if (fluidService.isLibraryLoaded) {
+                                await fluidService.loadSoundFont(newPath);
+                              }
+                            }
+                          },
+                        ),
+                        const Divider(height: 24),
+                      ] else ...[
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.piano_off_rounded,
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                context.tr('player_no_soundfont'),
+                                style: theme.textTheme.titleMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Action Buttons: Add SoundFont & Manage List
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: FilledButton.tonalIcon(
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: Text(context.tr('sf_btn_add_manual')),
+                                  onPressed: () => _pickSoundFont(context),
+                                ),
+                              ),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(
+                                    Icons.queue_music_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(context.tr('sf_manager_title')),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => SoundFontManagerPage(
+                                          soundFontService: soundFontService,
+                                          fluidService: fluidService,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Section 3: Audio Driver & Volume
               _buildSectionHeader(
                 context,
                 context.tr('settings_section_audio'),
               ),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: theme.dividerColor.withValues(alpha: 0.4),
-                  ),
-                ),
+              Card.outlined(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -238,12 +383,9 @@ class SettingsPage extends StatelessWidget {
                         value: fluidService.audioDriverName,
                         items: fluidService.availableAudioDrivers
                             .map(
-                              (driver) => DropdownMenuItem(
+                              (driver) => DropdownMenuEntry<String>(
                                 value: driver,
-                                child: Text(
-                                  driver,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                label: driver,
                               ),
                             )
                             .toList(),
@@ -309,14 +451,7 @@ class SettingsPage extends StatelessWidget {
 
               // Section 3: Language & Localization Adaptation
               _buildSectionHeader(context, context.tr('settings_section_i18n')),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: theme.dividerColor.withValues(alpha: 0.4),
-                  ),
-                ),
+              Card.outlined(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -329,20 +464,14 @@ class SettingsPage extends StatelessWidget {
                         label: context.tr('settings_language_label'),
                         value: i18nService.currentLanguage,
                         items: [
-                          DropdownMenuItem(
+                          DropdownMenuEntry<String>(
                             value: 'auto',
-                            child: Text(
-                              i18nService.getLanguageDisplayName('auto'),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            label: i18nService.getLanguageDisplayName('auto'),
                           ),
                           ...i18nService.supportedLanguages.map(
-                            (lang) => DropdownMenuItem(
+                            (lang) => DropdownMenuEntry<String>(
                               value: lang,
-                              child: Text(
-                                i18nService.getLanguageDisplayName(lang),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              label: i18nService.getLanguageDisplayName(lang),
                             ),
                           ),
                         ],
@@ -416,9 +545,9 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           );
@@ -454,10 +583,13 @@ class SettingsPage extends StatelessWidget {
     required Widget icon,
     required String label,
     required T value,
-    required List<DropdownMenuItem<T>> items,
+    required List<DropdownMenuEntry<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
     final theme = Theme.of(context);
+    final effectiveValue = items.any((e) => e.value == value)
+        ? value
+        : (items.isNotEmpty ? items.first.value : value);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -465,10 +597,7 @@ class SettingsPage extends StatelessWidget {
 
         // Measure label text width
         final labelPainter = TextPainter(
-          text: TextSpan(
-            text: label,
-            style: theme.textTheme.titleMedium,
-          ),
+          text: TextSpan(text: label, style: theme.textTheme.titleMedium),
           textDirection: textDirection,
           maxLines: 1,
         )..layout();
@@ -476,16 +605,8 @@ class SettingsPage extends StatelessWidget {
         // Measure widest dropdown item text
         double maxItemWidth = 0;
         for (final item in items) {
-          final child = item.child;
-          String text = '';
-          if (child is Text) {
-            text = child.data ?? '';
-          }
           final itemPainter = TextPainter(
-            text: TextSpan(
-              text: text,
-              style: theme.textTheme.bodyMedium,
-            ),
+            text: TextSpan(text: item.label, style: theme.textTheme.bodyMedium),
             textDirection: textDirection,
             maxLines: 1,
           )..layout();
@@ -494,28 +615,52 @@ class SettingsPage extends StatelessWidget {
           }
         }
 
-        // Icon(24) + spacing(12) + label + gap(16) + dropdown(item + arrow(24) + padding(24))
-        final totalNeeded = 24 + 12 + labelPainter.width + 16 + maxItemWidth + 48;
+        // Dropdown width: item text + dropdown arrow + padding
+        final dropdownWidth = (maxItemWidth + 64).clamp(160.0, 260.0);
+        // Icon(24) + spacing(12) + label + gap(16) + dropdown
+        final totalNeeded = 24 + 12 + labelPainter.width + 16 + dropdownWidth;
         final isWideEnough = constraints.maxWidth >= totalNeeded;
+
+        final decoration = InputDecorationTheme(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 10,
+          ),
+          filled: true,
+          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.35,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: theme.colorScheme.outlineVariant,
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        );
 
         if (isWideEnough) {
           return Row(
             children: [
               icon,
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
+              Expanded(child: Text(label, style: theme.textTheme.titleMedium)),
               const SizedBox(width: 8),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<T>(
-                  value: value,
-                  items: items,
-                  onChanged: onChanged,
-                ),
+              DropdownMenu<T>(
+                key: ValueKey(effectiveValue),
+                initialSelection: effectiveValue,
+                width: dropdownWidth,
+                requestFocusOnTap: false,
+                enableSearch: false,
+                dropdownMenuEntries: items,
+                onSelected: onChanged,
+                inputDecorationTheme: decoration,
               ),
             ],
           );
@@ -528,32 +673,20 @@ class SettingsPage extends StatelessWidget {
                   icon,
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      label,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    child: Text(label, style: theme.textTheme.titleMedium),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: theme.dividerColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<T>(
-                    value: value,
-                    isExpanded: true,
-                    items: items,
-                    onChanged: onChanged,
-                  ),
-                ),
+              const SizedBox(height: 10),
+              DropdownMenu<T>(
+                key: ValueKey(effectiveValue),
+                initialSelection: effectiveValue,
+                expandedInsets: EdgeInsets.zero,
+                requestFocusOnTap: false,
+                enableSearch: false,
+                dropdownMenuEntries: items,
+                onSelected: onChanged,
+                inputDecorationTheme: decoration,
               ),
             ],
           );

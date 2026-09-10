@@ -18,19 +18,19 @@ class SoundFontItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'path': path,
-        'name': name,
-        'fileSize': fileSize,
-        'addedAt': addedAt.toIso8601String(),
-      };
+    'path': path,
+    'name': name,
+    'fileSize': fileSize,
+    'addedAt': addedAt.toIso8601String(),
+  };
 
   factory SoundFontItem.fromJson(Map<String, dynamic> json) => SoundFontItem(
-        path: json['path'] as String,
-        name: json['name'] as String,
-        fileSize: json['fileSize'] as int? ?? 0,
-        addedAt: DateTime.tryParse(json['addedAt'] as String? ?? '') ??
-            DateTime.now(),
-      );
+    path: json['path'] as String,
+    name: json['name'] as String,
+    fileSize: json['fileSize'] as int? ?? 0,
+    addedAt:
+        DateTime.tryParse(json['addedAt'] as String? ?? '') ?? DateTime.now(),
+  );
 }
 
 class SoundFontService extends ChangeNotifier {
@@ -64,12 +64,14 @@ class SoundFontService extends ChangeNotifier {
         _knownSoundFonts.clear();
         for (var item in list) {
           final sfItem = SoundFontItem.fromJson(item as Map<String, dynamic>);
-          _knownSoundFonts.add(SoundFontItem(
-            path: p.normalize(sfItem.path),
-            name: sfItem.name,
-            fileSize: sfItem.fileSize,
-            addedAt: sfItem.addedAt,
-          ));
+          _knownSoundFonts.add(
+            SoundFontItem(
+              path: p.normalize(sfItem.path),
+              name: sfItem.name,
+              fileSize: sfItem.fileSize,
+              addedAt: sfItem.addedAt,
+            ),
+          );
         }
       } catch (e) {
         debugPrint('Error parsing known soundfonts: $e');
@@ -84,8 +86,9 @@ class SoundFontService extends ChangeNotifier {
     // If active path is not valid or not in list, fallback to first if available
     if (_activeSoundFontPath != null &&
         !_knownSoundFonts.any((e) => p.equals(e.path, _activeSoundFontPath!))) {
-      _activeSoundFontPath =
-          _knownSoundFonts.isNotEmpty ? _knownSoundFonts.first.path : null;
+      _activeSoundFontPath = _knownSoundFonts.isNotEmpty
+          ? _knownSoundFonts.first.path
+          : null;
     } else if (_activeSoundFontPath == null && _knownSoundFonts.isNotEmpty) {
       _activeSoundFontPath = _knownSoundFonts.first.path;
     }
@@ -106,8 +109,9 @@ class SoundFontService extends ChangeNotifier {
     final size = await file.length();
 
     // Check if already in list
-    final existingIndex =
-        _knownSoundFonts.indexWhere((e) => p.equals(e.path, filePath));
+    final existingIndex = _knownSoundFonts.indexWhere(
+      (e) => p.equals(e.path, filePath),
+    );
     if (existingIndex >= 0) {
       // Move to top
       final existing = _knownSoundFonts.removeAt(existingIndex);
@@ -149,8 +153,9 @@ class SoundFontService extends ChangeNotifier {
     _knownSoundFonts.removeWhere((e) => p.equals(e.path, filePath));
     if (_activeSoundFontPath != null &&
         p.equals(_activeSoundFontPath!, filePath)) {
-      _activeSoundFontPath =
-          _knownSoundFonts.isNotEmpty ? _knownSoundFonts.first.path : null;
+      _activeSoundFontPath = _knownSoundFonts.isNotEmpty
+          ? _knownSoundFonts.first.path
+          : null;
     }
     await _saveToPrefs();
     notifyListeners();

@@ -83,9 +83,9 @@ class I18nService extends ChangeNotifier {
         continue;
       }
 
-      final row = const CsvToListConverter(shouldParseNumbers: false)
-          .convert(rawLine)
-          .firstOrNull;
+      final row = const CsvToListConverter(
+        shouldParseNumbers: false,
+      ).convert(rawLine).firstOrNull;
 
       if (row == null || row.isEmpty) continue;
 
@@ -132,7 +132,9 @@ class I18nService extends ChangeNotifier {
     }
     final locale = WidgetsBinding.instance.platformDispatcher.locale;
     final code = '${locale.languageCode}_${locale.countryCode}';
-    if (code.startsWith('zh_TW') || code.startsWith('zh_HK') || code.startsWith('zh_MO')) {
+    if (code.startsWith('zh_TW') ||
+        code.startsWith('zh_HK') ||
+        code.startsWith('zh_MO')) {
       return 'zh_TW';
     } else if (code.startsWith('zh')) {
       return 'zh_CN';

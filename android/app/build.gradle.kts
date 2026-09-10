@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ffs.ffs"
+    namespace = "io.github.zhaoymovo.ffs"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.ffs.ffs"
+        applicationId = "io.github.zhaoymovo.ffs"
         // FluidSynth Android 24 release requires minimum SDK 24
         minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion

@@ -48,13 +48,14 @@ void main() async {
   );
 
   // Initialize file scanning & FluidSynth audio engine asynchronously in background
-  _initServicesAsync(fluidService, soundFontService, fileService);
+  _initServicesAsync(fluidService, soundFontService, fileService, i18nService);
 }
 
 void _initServicesAsync(
   FluidSynthService fluidService,
   SoundFontService soundFontService,
   FileService fileService,
+  I18nService i18nService,
 ) async {
   // Scan home directory in background (fileService notifies listeners when complete)
   fileService.initialize();
@@ -66,7 +67,7 @@ void _initServicesAsync(
   }
 
   // Initialize system media controls (Windows SMTC, Android MediaSession & Foreground Service, iOS/macOS Now Playing)
-  await initAudioService(fluidService);
+  await initAudioService(fluidService, i18nService: i18nService);
 }
 
 class FluidMidiApp extends StatefulWidget {
@@ -125,14 +126,19 @@ class _FluidMidiAppState extends State<FluidMidiApp> {
       child: ListenableBuilder(
         listenable: widget.i18nService,
         builder: (context, _) {
+          final fontFallbacks = _getFontFamilyFallback(
+            widget.i18nService.currentLanguage,
+          );
           return DynamicColorBuilder(
             builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-              final lightColorScheme = lightDynamic ??
+              final lightColorScheme =
+                  lightDynamic ??
                   ColorScheme.fromSeed(
                     seedColor: Colors.deepPurple,
                     brightness: Brightness.light,
                   );
-              final darkColorScheme = darkDynamic ??
+              final darkColorScheme =
+                  darkDynamic ??
                   ColorScheme.fromSeed(
                     seedColor: Colors.deepPurple,
                     brightness: Brightness.dark,
@@ -144,15 +150,27 @@ class _FluidMidiAppState extends State<FluidMidiApp> {
                 theme: ThemeData(
                   useMaterial3: true,
                   colorScheme: lightColorScheme,
-                  cardTheme: const CardThemeData(
-                    elevation: 0,
+                  fontFamily: 'GoogleSans',
+                  fontFamilyFallback: fontFallbacks,
+                  cardTheme: const CardThemeData(elevation: 0),
+                  snackBarTheme: const SnackBarThemeData(
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                  bottomSheetTheme: const BottomSheetThemeData(
+                    showDragHandle: true,
                   ),
                 ),
                 darkTheme: ThemeData(
                   useMaterial3: true,
                   colorScheme: darkColorScheme,
-                  cardTheme: const CardThemeData(
-                    elevation: 0,
+                  fontFamily: 'GoogleSans',
+                  fontFamilyFallback: fontFallbacks,
+                  cardTheme: const CardThemeData(elevation: 0),
+                  snackBarTheme: const SnackBarThemeData(
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                  bottomSheetTheme: const BottomSheetThemeData(
+                    showDragHandle: true,
                   ),
                 ),
                 themeMode: ThemeMode.system,
@@ -169,4 +187,60 @@ class _FluidMidiAppState extends State<FluidMidiApp> {
       ),
     );
   }
+}
+
+List<String> _getFontFamilyFallback(String languageCode) {
+  final isHant =
+      languageCode == 'zh_TW' ||
+      (languageCode == 'auto' &&
+          (PlatformDispatcher.instance.locale.scriptCode == 'Hant' ||
+              PlatformDispatcher.instance.locale.countryCode == 'TW' ||
+              PlatformDispatcher.instance.locale.countryCode == 'HK'));
+
+  final isJapanese =
+      languageCode == 'ja' ||
+      (languageCode == 'auto' &&
+          PlatformDispatcher.instance.locale.languageCode == 'ja');
+
+  if (isJapanese) {
+    return const [
+      'Hiragino Sans',
+      'Hiragino Kaku Gothic ProN',
+      'Yu Gothic',
+      'Meiryo',
+      'Noto Sans CJK JP',
+      'Noto Sans JP',
+      'PingFang SC',
+      'Microsoft YaHei',
+      'sans-serif',
+    ];
+  }
+
+  if (isHant) {
+    return const [
+      'PingFang TC',
+      'PingFang HK',
+      'Microsoft JhengHei',
+      'Noto Sans CJK TC',
+      'Noto Sans TC',
+      'PingFang SC',
+      'Microsoft YaHei',
+      'Noto Sans CJK SC',
+      'Noto Sans SC',
+      'sans-serif',
+    ];
+  }
+
+  // Simplified Chinese & general fallback
+  return const [
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    'Noto Sans SC',
+    'PingFang TC',
+    'Microsoft JhengHei',
+    'Noto Sans CJK TC',
+    'Noto Sans TC',
+    'sans-serif',
+  ];
 }

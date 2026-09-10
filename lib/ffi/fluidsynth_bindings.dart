@@ -3,9 +3,13 @@ import 'package:ffi/ffi.dart';
 
 // Opaque FluidSynth structures
 final class FluidSettings extends Opaque {}
+
 final class FluidSynth extends Opaque {}
+
 final class FluidAudioDriver extends Opaque {}
+
 final class FluidPlayer extends Opaque {}
+
 final class FluidSFont extends Opaque {}
 
 // Player status enum matching fluidsynth/midi.h
@@ -23,14 +27,18 @@ class FluidSynthBindings {
   // Settings
   late final Pointer<FluidSettings> Function() newFluidSettings;
   late final void Function(Pointer<FluidSettings>) deleteFluidSettings;
-  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, Pointer<Utf8>) fluidSettingsSetStr;
-  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, int) fluidSettingsSetInt;
-  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, double) fluidSettingsSetNum;
+  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, Pointer<Utf8>)
+  fluidSettingsSetStr;
+  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, int)
+  fluidSettingsSetInt;
+  late final int Function(Pointer<FluidSettings>, Pointer<Utf8>, double)
+  fluidSettingsSetNum;
 
   // Synth
   late final Pointer<FluidSynth> Function(Pointer<FluidSettings>) newFluidSynth;
   late final void Function(Pointer<FluidSynth>) deleteFluidSynth;
-  late final int Function(Pointer<FluidSynth>, Pointer<Utf8>, int) fluidSynthSfLoad;
+  late final int Function(Pointer<FluidSynth>, Pointer<Utf8>, int)
+  fluidSynthSfLoad;
   late final int Function(Pointer<FluidSynth>, int, int) fluidSynthSfUnload;
   late final void Function(Pointer<FluidSynth>, double) fluidSynthSetGain;
   late final int Function(Pointer<FluidSynth>, int, int, int) fluidSynthNoteOn;
@@ -40,7 +48,11 @@ class FluidSynthBindings {
   late final int Function(Pointer<FluidSynth>) fluidSynthSystemReset;
 
   // Audio Driver
-  late final Pointer<FluidAudioDriver> Function(Pointer<FluidSettings>, Pointer<FluidSynth>) newFluidAudioDriver;
+  late final Pointer<FluidAudioDriver> Function(
+    Pointer<FluidSettings>,
+    Pointer<FluidSynth>,
+  )
+  newFluidAudioDriver;
   late final void Function(Pointer<FluidAudioDriver>) deleteFluidAudioDriver;
 
   // Player
@@ -65,127 +77,202 @@ class FluidSynthBindings {
   FluidSynthBindings(this.lib) {
     // Settings
     newFluidSettings = lib
-        .lookup<NativeFunction<Pointer<FluidSettings> Function()>>('new_fluid_settings')
+        .lookup<NativeFunction<Pointer<FluidSettings> Function()>>(
+          'new_fluid_settings',
+        )
         .asFunction();
 
     deleteFluidSettings = lib
-        .lookup<NativeFunction<Void Function(Pointer<FluidSettings>)>>('delete_fluid_settings')
+        .lookup<NativeFunction<Void Function(Pointer<FluidSettings>)>>(
+          'delete_fluid_settings',
+        )
         .asFunction();
 
     fluidSettingsSetStr = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Pointer<Utf8>)>>('fluid_settings_setstr')
+        .lookup<
+          NativeFunction<
+            Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Pointer<Utf8>)
+          >
+        >('fluid_settings_setstr')
         .asFunction();
 
     fluidSettingsSetInt = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Int32)>>('fluid_settings_setint')
+        .lookup<
+          NativeFunction<
+            Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Int32)
+          >
+        >('fluid_settings_setint')
         .asFunction();
 
     fluidSettingsSetNum = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Double)>>('fluid_settings_setnum')
+        .lookup<
+          NativeFunction<
+            Int32 Function(Pointer<FluidSettings>, Pointer<Utf8>, Double)
+          >
+        >('fluid_settings_setnum')
         .asFunction();
 
     // Synth
     newFluidSynth = lib
-        .lookup<NativeFunction<Pointer<FluidSynth> Function(Pointer<FluidSettings>)>>('new_fluid_synth')
+        .lookup<
+          NativeFunction<Pointer<FluidSynth> Function(Pointer<FluidSettings>)>
+        >('new_fluid_synth')
         .asFunction();
 
     deleteFluidSynth = lib
-        .lookup<NativeFunction<Void Function(Pointer<FluidSynth>)>>('delete_fluid_synth')
+        .lookup<NativeFunction<Void Function(Pointer<FluidSynth>)>>(
+          'delete_fluid_synth',
+        )
         .asFunction();
 
     fluidSynthSfLoad = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Pointer<Utf8>, Int32)>>('fluid_synth_sfload')
+        .lookup<
+          NativeFunction<
+            Int32 Function(Pointer<FluidSynth>, Pointer<Utf8>, Int32)
+          >
+        >('fluid_synth_sfload')
         .asFunction();
 
     fluidSynthSfUnload = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32, Int32)>>('fluid_synth_sfunload')
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32, Int32)>
+        >('fluid_synth_sfunload')
         .asFunction();
 
     fluidSynthSetGain = lib
-        .lookup<NativeFunction<Void Function(Pointer<FluidSynth>, Float)>>('fluid_synth_set_gain')
+        .lookup<NativeFunction<Void Function(Pointer<FluidSynth>, Float)>>(
+          'fluid_synth_set_gain',
+        )
         .asFunction();
 
     fluidSynthNoteOn = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32, Int32, Int32)>>('fluid_synth_noteon')
+        .lookup<
+          NativeFunction<
+            Int32 Function(Pointer<FluidSynth>, Int32, Int32, Int32)
+          >
+        >('fluid_synth_noteon')
         .asFunction();
 
     fluidSynthNoteOff = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32, Int32)>>('fluid_synth_noteoff')
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32, Int32)>
+        >('fluid_synth_noteoff')
         .asFunction();
 
     fluidSynthAllNotesOff = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32)>>('fluid_synth_all_notes_off')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32)>>(
+          'fluid_synth_all_notes_off',
+        )
         .asFunction();
 
     fluidSynthAllSoundsOff = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32)>>('fluid_synth_all_sounds_off')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>, Int32)>>(
+          'fluid_synth_all_sounds_off',
+        )
         .asFunction();
 
     fluidSynthSystemReset = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>)>>('fluid_synth_system_reset')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidSynth>)>>(
+          'fluid_synth_system_reset',
+        )
         .asFunction();
 
     // Audio Driver
     newFluidAudioDriver = lib
-        .lookup<NativeFunction<Pointer<FluidAudioDriver> Function(Pointer<FluidSettings>, Pointer<FluidSynth>)>>('new_fluid_audio_driver')
+        .lookup<
+          NativeFunction<
+            Pointer<FluidAudioDriver> Function(
+              Pointer<FluidSettings>,
+              Pointer<FluidSynth>,
+            )
+          >
+        >('new_fluid_audio_driver')
         .asFunction();
 
     deleteFluidAudioDriver = lib
-        .lookup<NativeFunction<Void Function(Pointer<FluidAudioDriver>)>>('delete_fluid_audio_driver')
+        .lookup<NativeFunction<Void Function(Pointer<FluidAudioDriver>)>>(
+          'delete_fluid_audio_driver',
+        )
         .asFunction();
 
     // Player
     newFluidPlayer = lib
-        .lookup<NativeFunction<Pointer<FluidPlayer> Function(Pointer<FluidSynth>)>>('new_fluid_player')
+        .lookup<
+          NativeFunction<Pointer<FluidPlayer> Function(Pointer<FluidSynth>)>
+        >('new_fluid_player')
         .asFunction();
 
     deleteFluidPlayer = lib
-        .lookup<NativeFunction<Void Function(Pointer<FluidPlayer>)>>('delete_fluid_player')
+        .lookup<NativeFunction<Void Function(Pointer<FluidPlayer>)>>(
+          'delete_fluid_player',
+        )
         .asFunction();
 
     fluidPlayerAdd = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>, Pointer<Utf8>)>>('fluid_player_add')
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<FluidPlayer>, Pointer<Utf8>)>
+        >('fluid_player_add')
         .asFunction();
 
     fluidPlayerPlay = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_play')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_play',
+        )
         .asFunction();
 
     fluidPlayerStop = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_stop')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_stop',
+        )
         .asFunction();
 
     fluidPlayerJoin = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_join')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_join',
+        )
         .asFunction();
 
     fluidPlayerSeek = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>, Int32)>>('fluid_player_seek')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>, Int32)>>(
+          'fluid_player_seek',
+        )
         .asFunction();
 
     fluidPlayerSetLoop = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>, Int32)>>('fluid_player_set_loop')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>, Int32)>>(
+          'fluid_player_set_loop',
+        )
         .asFunction();
 
     fluidPlayerGetStatus = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_status')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_get_status',
+        )
         .asFunction();
 
     fluidPlayerGetCurrentTick = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_current_tick')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_get_current_tick',
+        )
         .asFunction();
 
     fluidPlayerGetTotalTicks = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_total_ticks')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_get_total_ticks',
+        )
         .asFunction();
 
     fluidPlayerGetBpm = lib
-        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_bpm')
+        .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+          'fluid_player_get_bpm',
+        )
         .asFunction();
 
     try {
       fluidPlayerGetDivision = lib
-          .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_division')
+          .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+            'fluid_player_get_division',
+          )
           .asFunction();
     } catch (_) {
       fluidPlayerGetDivision = (p) => 480;
@@ -193,7 +280,9 @@ class FluidSynthBindings {
 
     try {
       fluidPlayerGetMidiTempo = lib
-          .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>('fluid_player_get_midi_tempo')
+          .lookup<NativeFunction<Int32 Function(Pointer<FluidPlayer>)>>(
+            'fluid_player_get_midi_tempo',
+          )
           .asFunction();
     } catch (_) {
       fluidPlayerGetMidiTempo = (p) => 500000;

@@ -1,4 +1,4 @@
-package com.ffs.ffs
+package io.github.zhaoymovo.ffs
 
 import android.util.Log
 import com.ryanheise.audioservice.AudioServiceActivity

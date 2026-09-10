@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +10,6 @@ import '../services/fluidsynth_service.dart';
 import '../services/soundfont_service.dart';
 import 'player_widget.dart';
 import 'settings_page.dart';
-import 'soundfont_dialog.dart';
 
 class MainNavigationPage extends StatefulWidget {
   final FileService fileService;
@@ -84,11 +84,14 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             autofocus: true,
             onKeyEvent: (node, event) {
               if (event is KeyDownEvent) {
-                final isBrowserBack = event.logicalKey == LogicalKeyboardKey.browserBack ||
+                final isBrowserBack =
+                    event.logicalKey == LogicalKeyboardKey.browserBack ||
                     event.logicalKey == LogicalKeyboardKey.goBack;
-                final isAltUp = HardwareKeyboard.instance.isAltPressed &&
+                final isAltUp =
+                    HardwareKeyboard.instance.isAltPressed &&
                     event.logicalKey == LogicalKeyboardKey.arrowUp;
-                final isCmdUp = HardwareKeyboard.instance.isMetaPressed &&
+                final isCmdUp =
+                    HardwareKeyboard.instance.isMetaPressed &&
                     event.logicalKey == LogicalKeyboardKey.arrowUp;
 
                 if (isBrowserBack || isAltUp || isCmdUp) {
@@ -109,29 +112,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   }
                 }
               },
-              child: Scaffold(
-                body: Column(
-                  children: [
-                    Expanded(
-                      child: FileBrowserView(
-                        fileService: widget.fileService,
-                        fluidService: widget.fluidService,
-                        soundFontService: widget.soundFontService,
-                        i18nService: widget.i18nService,
-                      ),
-                    ),
-                    // Persistent Player Bar
-                    ListenableBuilder(
-                      listenable: Listenable.merge([widget.fluidService, widget.soundFontService]),
-                      builder: (ctx, _) {
-                        return PlayerWidget(
-                          fluidService: widget.fluidService,
-                          soundFontService: widget.soundFontService,
-                        );
-                      },
-                    ),
-                  ],
-                ),
+              child: FileBrowserView(
+                fileService: widget.fileService,
+                fluidService: widget.fluidService,
+                soundFontService: widget.soundFontService,
+                i18nService: widget.i18nService,
               ),
             ),
           ),
@@ -155,7 +140,11 @@ class FileBrowserView extends StatelessWidget {
     required this.i18nService,
   });
 
-  Future<void> _handleFileClick(BuildContext context, DiscoveredFileItem item, {bool singleOnly = false}) async {
+  Future<void> _handleFileClick(
+    BuildContext context,
+    DiscoveredFileItem item, {
+    bool singleOnly = false,
+  }) async {
     if (item.isDirectory) {
       await fileService.navigateTo(item.path);
       return;
@@ -231,7 +220,9 @@ class FileBrowserView extends StatelessWidget {
             if (loaded) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('${context.tr('sf_toast_added')}: ${item.name}'),
+                  content: Text(
+                    '${context.tr('sf_toast_added')}: ${item.name}',
+                  ),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -259,6 +250,7 @@ class FileBrowserView extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => SettingsPage(
                           fluidService: fluidService,
+                          soundFontService: soundFontService,
                           i18nService: i18nService,
                         ),
                       ),
@@ -286,6 +278,7 @@ class FileBrowserView extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded),
         title: Text(context.tr('common_warning')),
         content: Text(context.tr('home_prompt_lib_not_loaded')),
         actions: [
@@ -301,6 +294,7 @@ class FileBrowserView extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => SettingsPage(
                     fluidService: fluidService,
+                    soundFontService: soundFontService,
                     i18nService: i18nService,
                   ),
                 ),
@@ -316,6 +310,7 @@ class FileBrowserView extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded),
         title: Text(context.tr('common_warning')),
         content: Text(context.tr('home_prompt_select_soundfont')),
         actions: [
@@ -331,16 +326,26 @@ class FileBrowserView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isWide =
+        MediaQuery.sizeOf(context).width >= PlayerWidget.wideBreakpoint;
+    final playerBottomPadding =
+        (isWide ? 144.0 : 196.0) + MediaQuery.paddingOf(context).bottom;
 
     return ListenableBuilder(
-      listenable: Listenable.merge([fileService, fluidService, soundFontService]),
+      listenable: Listenable.merge([
+        fileService,
+        fluidService,
+        soundFontService,
+      ]),
       builder: (ctx, _) {
         return Scaffold(
+          extendBody: true,
           appBar: AppBar(
             toolbarHeight: 52,
             titleSpacing: 4,
             elevation: 0,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            scrolledUnderElevation: 0,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
             title: Row(
               children: [
                 IconButton(
@@ -348,11 +353,13 @@ class FileBrowserView extends StatelessWidget {
                   tooltip: context.tr('home_btn_home'),
                   onPressed: () => fileService.navigateToHome(),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.storage_rounded, size: 20),
-                  tooltip: context.tr('home_btn_volumes'),
-                  onPressed: () => fileService.navigateToVolumes(),
-                ),
+                if (defaultTargetPlatform != TargetPlatform.android &&
+                    defaultTargetPlatform != TargetPlatform.iOS)
+                  IconButton(
+                    icon: const Icon(Icons.storage_rounded, size: 20),
+                    tooltip: context.tr('home_btn_volumes'),
+                    onPressed: () => fileService.navigateToVolumes(),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.arrow_upward, size: 20),
                   tooltip: context.tr('home_btn_parent_dir'),
@@ -377,25 +384,6 @@ class FileBrowserView extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                tooltip: context.tr('home_btn_refresh'),
-                icon: const Icon(Icons.refresh, size: 20),
-                onPressed: () => fileService.scanCurrentDirectory(),
-              ),
-              IconButton(
-                tooltip: context.tr('home_tab_soundfonts'),
-                icon: const Icon(Icons.piano, size: 20),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SoundFontManagerPage(
-                        soundFontService: soundFontService,
-                        fluidService: fluidService,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              IconButton(
                 tooltip: context.tr('home_tab_settings'),
                 icon: const Icon(Icons.settings, size: 20),
                 onPressed: () {
@@ -403,6 +391,7 @@ class FileBrowserView extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) => SettingsPage(
                         fluidService: fluidService,
+                        soundFontService: soundFontService,
                         i18nService: i18nService,
                       ),
                     ),
@@ -418,10 +407,17 @@ class FileBrowserView extends StatelessWidget {
               if (!fluidService.isLibraryLoaded)
                 Container(
                   color: theme.colorScheme.errorContainer,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: theme.colorScheme.onErrorContainer, size: 20),
+                      Icon(
+                        Icons.error_outline,
+                        color: theme.colorScheme.onErrorContainer,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -439,6 +435,7 @@ class FileBrowserView extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) => SettingsPage(
                                 fluidService: fluidService,
+                                soundFontService: soundFontService,
                                 i18nService: i18nService,
                               ),
                             ),
@@ -453,70 +450,139 @@ class FileBrowserView extends StatelessWidget {
               // Permission check warning if needed
               if (!fileService.permissionGranted)
                 Container(
-                  color: Colors.amber.shade100,
-                  padding: const EdgeInsets.all(12),
+                  color: theme.colorScheme.tertiaryContainer,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning, color: Colors.amber),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: theme.colorScheme.onTertiaryContainer,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           context.tr('home_permission_denied'),
-                          style: const TextStyle(color: Colors.black87),
+                          style: TextStyle(
+                            color: theme.colorScheme.onTertiaryContainer,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       TextButton(
-                        onPressed: () => fileService.requestStoragePermissions(),
+                        onPressed: () =>
+                            fileService.requestStoragePermissions(),
                         child: Text(context.tr('home_btn_request_permission')),
                       ),
                     ],
                   ),
                 ),
 
-
-              // Loading indicator or file list
+              // Loading indicator or file list with pull-to-refresh
               Expanded(
-                child: fileService.isLoading
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 12),
-                            Text(context.tr('common_loading')),
-                          ],
-                        ),
-                      )
-                    : fileService.currentFiles.isEmpty
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                      PointerDeviceKind.stylus,
+                    },
+                  ),
+                  child: RefreshIndicator(
+                    onRefresh: () => fileService.scanCurrentDirectory(),
+                    child: fileService.isLoading
                         ? Center(
                             child: Padding(
-                              padding: const EdgeInsets.all(32),
+                              padding: EdgeInsets.only(
+                                bottom: playerBottomPadding,
+                              ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.folder_open, size: 64, color: theme.disabledColor),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    context.tr('home_no_files_found'),
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(height: 12),
+                                  Text(context.tr('common_loading')),
                                 ],
                               ),
                             ),
                           )
+                        : fileService.currentFiles.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraints) =>
+                                SingleChildScrollView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.only(
+                                    bottom: playerBottomPadding,
+                                  ),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight: constraints.maxHeight -
+                                          playerBottomPadding,
+                                    ),
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(32),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.folder_open,
+                                              size: 64,
+                                              color: theme.disabledColor,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              context.tr('home_no_files_found'),
+                                              textAlign: TextAlign.center,
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          )
                         : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.only(
+                              bottom: playerBottomPadding,
+                            ),
                             itemCount: fileService.currentFiles.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 1),
                             itemBuilder: (ctx, index) {
                               final item = fileService.currentFiles[index];
                               return _buildFileTile(context, item);
                             },
                           ),
+                  ),
+                ),
               ),
             ],
+          ),
+          bottomNavigationBar: ListenableBuilder(
+            listenable: Listenable.merge([
+              fluidService,
+              soundFontService,
+            ]),
+            builder: (ctx, _) {
+              return PlayerWidget(
+                fluidService: fluidService,
+                soundFontService: soundFontService,
+              );
+            },
           ),
         );
       },
@@ -538,7 +604,9 @@ class FileBrowserView extends StatelessWidget {
         ),
         title: Text(
           item.name,
-          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
         ),
         subtitle: Text(
           item.isDrive
@@ -558,7 +626,8 @@ class FileBrowserView extends StatelessWidget {
     }
 
     if (item.isMidi) {
-      final isCurrentTrack = fluidService.currentMidiPath != null &&
+      final isCurrentTrack =
+          fluidService.currentMidiPath != null &&
           p.equals(fluidService.currentMidiPath!, item.path);
       final isCurrentPlaying = isCurrentTrack && fluidService.isPlaying;
 
@@ -567,19 +636,19 @@ class FileBrowserView extends StatelessWidget {
           backgroundColor: isCurrentPlaying
               ? theme.colorScheme.primary
               : isCurrentTrack
-                  ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerHighest,
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
           child: Icon(
             isCurrentPlaying
                 ? Icons.equalizer_rounded
                 : isCurrentTrack
-                    ? Icons.play_arrow_rounded
-                    : Icons.music_note_rounded,
+                ? Icons.play_arrow_rounded
+                : Icons.music_note_rounded,
             color: isCurrentPlaying
                 ? theme.colorScheme.onPrimary
                 : isCurrentTrack
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurfaceVariant,
+                ? theme.colorScheme.onPrimaryContainer
+                : theme.colorScheme.onSurfaceVariant,
             size: 20,
           ),
         ),
@@ -608,7 +677,9 @@ class FileBrowserView extends StatelessWidget {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('${context.tr('home_toast_added_next')}: ${item.name}'),
+                content: Text(
+                  '${context.tr('home_toast_added_next')}: ${item.name}',
+                ),
                 duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -620,17 +691,22 @@ class FileBrowserView extends StatelessWidget {
     }
 
     // SoundFont (.sf2 / .sf3 / .dls)
-    final isCurrentSf = (soundFontService.activeSoundFontPath != null &&
+    final isCurrentSf =
+        (soundFontService.activeSoundFontPath != null &&
             p.equals(soundFontService.activeSoundFontPath!, item.path)) ||
         (fluidService.loadedSfPath != null &&
             p.equals(fluidService.loadedSfPath!, item.path));
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: isCurrentSf ? theme.colorScheme.tertiary : theme.colorScheme.tertiaryContainer,
+        backgroundColor: isCurrentSf
+            ? theme.colorScheme.tertiary
+            : theme.colorScheme.tertiaryContainer,
         child: Icon(
           Icons.piano_rounded,
-          color: isCurrentSf ? theme.colorScheme.onTertiary : theme.colorScheme.onTertiaryContainer,
+          color: isCurrentSf
+              ? theme.colorScheme.onTertiary
+              : theme.colorScheme.onTertiaryContainer,
           size: 20,
         ),
       ),

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.ffs" "\0"
-            VALUE "FileDescription", "ffs" "\0"
+            VALUE "CompanyName", "io.github.zhaoymovo" "\0"
+            VALUE "FileDescription", "SynthBox" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ffs" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.ffs. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ffs.exe" "\0"
-            VALUE "ProductName", "ffs" "\0"
+            VALUE "InternalName", "SynthBox" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 io.github.zhaoymovo. All rights reserved." "\0"
+            VALUE "OriginalFilename", "SynthBox.exe" "\0"
+            VALUE "ProductName", "SynthBox" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

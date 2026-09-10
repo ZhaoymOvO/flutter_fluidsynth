@@ -51,9 +51,9 @@ class SoundFontManagerPage extends StatelessWidget {
             );
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.tr('sf_load_error'))),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(context.tr('sf_load_error'))));
         }
       }
     }
@@ -129,7 +129,8 @@ class SoundFontManagerPage extends StatelessWidget {
                             const Divider(height: 1),
                         itemBuilder: (ctx, index) {
                           final item = knownList[index];
-                          final isActive = activePath != null &&
+                          final isActive =
+                              activePath != null &&
                               p.equals(item.path, activePath);
 
                           return ListTile(
@@ -172,8 +173,7 @@ class SoundFontManagerPage extends StatelessWidget {
                                 if (item.fileSize > 0)
                                   Text(
                                     _formatBytes(item.fileSize),
-                                    style:
-                                        theme.textTheme.labelSmall?.copyWith(
+                                    style: theme.textTheme.labelSmall?.copyWith(
                                       color: theme.colorScheme.secondary,
                                     ),
                                   ),
@@ -196,37 +196,45 @@ class SoundFontManagerPage extends StatelessWidget {
                                   )
                                 else
                                   TextButton(
-                                    child:
-                                        Text(context.tr('sf_btn_set_active')),
+                                    child: Text(
+                                      context.tr('sf_btn_set_active'),
+                                    ),
                                     onPressed: () async {
-                                      await soundFontService
-                                          .setActiveSoundFont(item.path);
-                                      await fluidService
-                                          .loadSoundFont(item.path);
+                                      await soundFontService.setActiveSoundFont(
+                                        item.path,
+                                      );
+                                      await fluidService.loadSoundFont(
+                                        item.path,
+                                      );
                                       if (ctx.mounted) {
                                         ScaffoldMessenger.of(ctx).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                                context.tr('sf_toast_switched')),
-                                            duration:
-                                                const Duration(seconds: 2),
+                                              context.tr('sf_toast_switched'),
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
                                           ),
                                         );
                                       }
                                     },
                                   ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 20),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                  ),
                                   tooltip: context.tr('sf_btn_remove'),
                                   onPressed: () async {
-                                    await soundFontService
-                                        .removeSoundFont(item.path);
+                                    await soundFontService.removeSoundFont(
+                                      item.path,
+                                    );
                                     if (soundFontService.activeSoundFontPath !=
                                         null) {
                                       await fluidService.loadSoundFont(
-                                          soundFontService
-                                              .activeSoundFontPath!);
+                                        soundFontService.activeSoundFontPath!,
+                                      );
                                     } else {
                                       await fluidService.unloadSoundFont();
                                     }
@@ -234,9 +242,9 @@ class SoundFontManagerPage extends StatelessWidget {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                              context.tr('sf_toast_removed')),
-                                          duration:
-                                              const Duration(seconds: 2),
+                                            context.tr('sf_toast_removed'),
+                                          ),
+                                          duration: const Duration(seconds: 2),
                                         ),
                                       );
                                     }
@@ -246,14 +254,16 @@ class SoundFontManagerPage extends StatelessWidget {
                             ),
                             onTap: () async {
                               if (!isActive) {
-                                await soundFontService
-                                    .setActiveSoundFont(item.path);
+                                await soundFontService.setActiveSoundFont(
+                                  item.path,
+                                );
                                 await fluidService.loadSoundFont(item.path);
                                 if (ctx.mounted) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     SnackBar(
-                                      content:
-                                          Text(context.tr('sf_toast_switched')),
+                                      content: Text(
+                                        context.tr('sf_toast_switched'),
+                                      ),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );

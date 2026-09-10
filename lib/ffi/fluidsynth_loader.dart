@@ -17,15 +17,14 @@ class FluidSynthLoadResult {
     required this.bindings,
     required this.loadedPath,
     required this.version,
-  })  : isSuccess = true,
-        errorMessage = null;
+  }) : isSuccess = true,
+       errorMessage = null;
 
-  FluidSynthLoadResult.failure({
-    required this.errorMessage,
-  })  : isSuccess = false,
-        bindings = null,
-        loadedPath = null,
-        version = null;
+  FluidSynthLoadResult.failure({required this.errorMessage})
+    : isSuccess = false,
+      bindings = null,
+      loadedPath = null,
+      version = null;
 }
 
 class FluidSynthLoader {
@@ -55,9 +54,11 @@ class FluidSynthLoader {
       final dir = p.dirname(path);
       if (dir.isNotEmpty && dir != '.' && Directory(dir).existsSync()) {
         final kernel32 = DynamicLibrary.open('kernel32.dll');
-        final setDllDirectory = kernel32.lookupFunction<
-            Int32 Function(Pointer<Utf16>),
-            int Function(Pointer<Utf16>)>('SetDllDirectoryW');
+        final setDllDirectory = kernel32
+            .lookupFunction<
+              Int32 Function(Pointer<Utf16>),
+              int Function(Pointer<Utf16>)
+            >('SetDllDirectoryW');
         final dirPtr = dir.toNativeUtf16();
         setDllDirectory(dirPtr);
         calloc.free(dirPtr);
@@ -129,7 +130,8 @@ class FluidSynthLoader {
         // If an explicit custom path was specified, report failure immediately
         if (customPath != null) {
           return FluidSynthLoadResult.failure(
-            errorMessage: 'Failed to load sideloaded library from $sideloaded: $e',
+            errorMessage:
+                'Failed to load sideloaded library from $sideloaded: $e',
           );
         }
       }
@@ -173,7 +175,8 @@ class FluidSynthLoader {
     }
 
     return FluidSynthLoadResult.failure(
-      errorMessage: 'FluidSynth library could not be found.\nAttempted paths:\n${errors.join('\n')}',
+      errorMessage:
+          'FluidSynth library could not be found.\nAttempted paths:\n${errors.join('\n')}',
     );
   }
 
@@ -199,8 +202,22 @@ class FluidSynthLoader {
         p.join(exeDir, 'bin', 'fluidsynth.dll'),
 
         // 2. Project workspace local paths during tests/dev
-        p.join(Directory.current.path, 'windows', 'fluidsynth', 'x64', 'bin', 'libfluidsynth-3.dll'),
-        p.join(Directory.current.path, 'windows', 'fluidsynth', 'x86', 'bin', 'libfluidsynth-3.dll'),
+        p.join(
+          Directory.current.path,
+          'windows',
+          'fluidsynth',
+          'x64',
+          'bin',
+          'libfluidsynth-3.dll',
+        ),
+        p.join(
+          Directory.current.path,
+          'windows',
+          'fluidsynth',
+          'x86',
+          'bin',
+          'libfluidsynth-3.dll',
+        ),
 
         // 3. System PATH bare names
         'libfluidsynth-3.dll',
@@ -228,11 +245,7 @@ class FluidSynthLoader {
         '/usr/lib/aarch64-linux-gnu/libfluidsynth.so.3',
       ];
     } else if (Platform.isAndroid) {
-      return [
-        'libfluidsynth.so',
-        'libfluidsynth.so.3',
-        'fluidsynth',
-      ];
+      return ['libfluidsynth.so', 'libfluidsynth.so.3', 'fluidsynth'];
     } else if (Platform.isIOS) {
       return [
         'FluidSynth.framework/FluidSynth',

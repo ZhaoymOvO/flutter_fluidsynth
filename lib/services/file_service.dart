@@ -6,11 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-enum FileCategory {
-  directory,
-  midi,
-  soundFont,
-}
+enum FileCategory { directory, midi, soundFont }
 
 class DiscoveredFileItem {
   final FileSystemEntity entity;
@@ -101,7 +97,8 @@ class FileService extends ChangeNotifier {
         }
       }
 
-      _permissionGranted = status.isGranted || await Permission.manageExternalStorage.isGranted;
+      _permissionGranted =
+          status.isGranted || await Permission.manageExternalStorage.isGranted;
     } else {
       // Desktop platforms (macOS, Linux, Windows) & iOS
       _permissionGranted = true;
@@ -181,12 +178,9 @@ class FileService extends ChangeNotifier {
         return;
       }
 
-      final entities = await dir
-          .list(followLinks: false)
-          .handleError((e) {
-            debugPrint('File scan warning: $e');
-          })
-          .toList();
+      final entities = await dir.list(followLinks: false).handleError((e) {
+        debugPrint('File scan warning: $e');
+      }).toList();
       final List<DiscoveredFileItem> items = [];
 
       for (var entity in entities) {
@@ -212,14 +206,16 @@ class FileService extends ChangeNotifier {
 
         if (isDir) {
           // Keep directories so user can navigate into subfolders
-          items.add(DiscoveredFileItem(
-            entity: entity,
-            path: entity.path,
-            name: baseName,
-            category: FileCategory.directory,
-            sizeInBytes: 0,
-            lastModified: null,
-          ));
+          items.add(
+            DiscoveredFileItem(
+              entity: entity,
+              path: entity.path,
+              name: baseName,
+              category: FileCategory.directory,
+              sizeInBytes: 0,
+              lastModified: null,
+            ),
+          );
         } else if (isFile) {
           final ext = p.extension(entity.path).toLowerCase();
 
@@ -232,14 +228,16 @@ class FileService extends ChangeNotifier {
               size = stat.size;
               mod = stat.modified;
             } catch (_) {}
-            items.add(DiscoveredFileItem(
-              entity: entity,
-              path: entity.path,
-              name: baseName,
-              category: FileCategory.midi,
-              sizeInBytes: size,
-              lastModified: mod,
-            ));
+            items.add(
+              DiscoveredFileItem(
+                entity: entity,
+                path: entity.path,
+                name: baseName,
+                category: FileCategory.midi,
+                sizeInBytes: size,
+                lastModified: mod,
+              ),
+            );
           } else if (soundFontExtensions.contains(ext)) {
             int size = 0;
             DateTime? mod;
@@ -248,14 +246,16 @@ class FileService extends ChangeNotifier {
               size = stat.size;
               mod = stat.modified;
             } catch (_) {}
-            items.add(DiscoveredFileItem(
-              entity: entity,
-              path: entity.path,
-              name: baseName,
-              category: FileCategory.soundFont,
-              sizeInBytes: size,
-              lastModified: mod,
-            ));
+            items.add(
+              DiscoveredFileItem(
+                entity: entity,
+                path: entity.path,
+                name: baseName,
+                category: FileCategory.soundFont,
+                sizeInBytes: size,
+                lastModified: mod,
+              ),
+            );
           }
           // Any other file format is completely excluded!
         }
@@ -342,39 +342,45 @@ class FileService extends ChangeNotifier {
 
       // SetErrorMode to suppress OS error popups for unformatted/empty media
       try {
-        final setErrorMode = kernel32.lookupFunction<
-            Uint32 Function(Uint32),
-            int Function(int)>('SetErrorMode');
+        final setErrorMode = kernel32
+            .lookupFunction<Uint32 Function(Uint32), int Function(int)>(
+              'SetErrorMode',
+            );
         setErrorMode(0x0001 | 0x8000);
       } catch (_) {}
 
-      final getLogicalDrives = kernel32.lookupFunction<
-          Uint32 Function(),
-          int Function()>('GetLogicalDrives');
-      final getDriveType = kernel32.lookupFunction<
-          Uint32 Function(Pointer<Utf16>),
-          int Function(Pointer<Utf16>)>('GetDriveTypeW');
-      final getVolumeInfo = kernel32.lookupFunction<
-          Int32 Function(
-            Pointer<Utf16>,
-            Pointer<Utf16>,
-            Uint32,
-            Pointer<Uint32>,
-            Pointer<Uint32>,
-            Pointer<Uint32>,
-            Pointer<Utf16>,
-            Uint32,
-          ),
-          int Function(
-            Pointer<Utf16>,
-            Pointer<Utf16>,
-            int,
-            Pointer<Uint32>,
-            Pointer<Uint32>,
-            Pointer<Uint32>,
-            Pointer<Utf16>,
-            int,
-          )>('GetVolumeInformationW');
+      final getLogicalDrives = kernel32
+          .lookupFunction<Uint32 Function(), int Function()>(
+            'GetLogicalDrives',
+          );
+      final getDriveType = kernel32
+          .lookupFunction<
+            Uint32 Function(Pointer<Utf16>),
+            int Function(Pointer<Utf16>)
+          >('GetDriveTypeW');
+      final getVolumeInfo = kernel32
+          .lookupFunction<
+            Int32 Function(
+              Pointer<Utf16>,
+              Pointer<Utf16>,
+              Uint32,
+              Pointer<Uint32>,
+              Pointer<Uint32>,
+              Pointer<Uint32>,
+              Pointer<Utf16>,
+              Uint32,
+            ),
+            int Function(
+              Pointer<Utf16>,
+              Pointer<Utf16>,
+              int,
+              Pointer<Uint32>,
+              Pointer<Uint32>,
+              Pointer<Uint32>,
+              Pointer<Utf16>,
+              int,
+            )
+          >('GetVolumeInformationW');
 
       final mask = getLogicalDrives();
       for (int i = 0; i < 26; i++) {
@@ -441,15 +447,17 @@ class FileService extends ChangeNotifier {
             }
           }
 
-          driveItems.add(DiscoveredFileItem(
-            entity: Directory(drivePath),
-            path: drivePath,
-            name: displayName,
-            category: FileCategory.directory,
-            sizeInBytes: 0,
-            lastModified: null,
-            isDrive: true,
-          ));
+          driveItems.add(
+            DiscoveredFileItem(
+              entity: Directory(drivePath),
+              path: drivePath,
+              name: displayName,
+              category: FileCategory.directory,
+              sizeInBytes: 0,
+              lastModified: null,
+              isDrive: true,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -461,15 +469,17 @@ class FileService extends ChangeNotifier {
         try {
           final dir = Directory(drivePath);
           if (dir.existsSync()) {
-            driveItems.add(DiscoveredFileItem(
-              entity: dir,
-              path: drivePath,
-              name: 'Drive ($letter:)',
-              category: FileCategory.directory,
-              sizeInBytes: 0,
-              lastModified: null,
-              isDrive: true,
-            ));
+            driveItems.add(
+              DiscoveredFileItem(
+                entity: dir,
+                path: drivePath,
+                name: 'Drive ($letter:)',
+                category: FileCategory.directory,
+                sizeInBytes: 0,
+                lastModified: null,
+                isDrive: true,
+              ),
+            );
           }
         } catch (_) {}
       }
