@@ -139,12 +139,14 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       }
     });
 
-    test('FluidSynthService stop and reset operate cleanly without throwing', () {
+    test('FluidSynthService stop and reset operate cleanly without throwing and keep audio driver inactive', () {
       final service = FluidSynthService();
+      expect(service.isAudioDriverActive, isFalse);
       // Calling stop or pause before initialization or when stopped is safe and idempotent
       expect(() => service.stop(), returnsNormally);
       expect(() => service.pause(), returnsNormally);
       expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.isAudioDriverActive, isFalse);
     });
 
     test('Bundled FluidSynth native binaries exist for Android, Windows, and iOS', () {
@@ -304,6 +306,30 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       service.clearPlaylist();
       expect(service.playlist, isEmpty);
       expect(service.playlistIndex, equals(-1));
+    });
+
+    test('playNext with autoAdvance stops playback and releases pipeline when playlist ends', () async {
+      final service = FluidSynthService();
+      service.setLoopMode(LoopMode.none);
+      service.setPlaylist(['/path/1.mid', '/path/2.mid'], initialIndex: 1);
+
+      // Sequential playlist at last track with LoopMode.none
+      final hasNext = await service.playNext(autoAdvance: true);
+      expect(hasNext, isFalse);
+      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.isAudioDriverActive, isFalse);
+    });
+
+    test('Shuffle playNext with autoAdvance stops playback when all tracks have been played', () async {
+      final service = FluidSynthService();
+      service.setLoopMode(LoopMode.none);
+      // Single track playlist in shuffle mode
+      service.setPlaylist(['/path/single.mid'], initialIndex: 0);
+      service.toggleShuffle();
+      final hasNextSingle = await service.playNext(autoAdvance: true);
+      expect(hasNextSingle, isFalse);
+      expect(service.playbackState, equals(PlaybackState.stopped));
+      expect(service.isAudioDriverActive, isFalse);
     });
   });
 

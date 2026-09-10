@@ -104,6 +104,7 @@ class FluidSynthService extends ChangeNotifier {
   int get division => _division;
   double get volume => _volume;
   String get audioDriverName => _audioDriverName;
+  bool get isAudioDriverActive => _audioDriver != null && _audioDriver != nullptr;
 
   /// Current playback position in seconds (calculated accurately using tempo map)
   double get currentTimeInSeconds {
@@ -269,17 +270,47 @@ class FluidSynthService extends ChangeNotifier {
       // Set initial gain
       b.fluidSynthSetGain(_synth!, (_volume * 2.0));
 
-      // Create audio driver
-      _audioDriver = b.newFluidAudioDriver(_settings!, _synth!);
-      if (_audioDriver == null || _audioDriver == nullptr) {
-        debugPrint('Warning: new_fluid_audio_driver returned null. Driver may be unavailable.');
-      }
-
+      // Audio driver is created on-demand when playback starts,
+      // avoiding idle occupation of the audio output pipeline and silent audio battery drain.
       return true;
     } catch (e) {
       _loadError = 'Exception initializing FluidSynth engine: $e';
       debugPrint(_loadError);
       return false;
+    }
+  }
+
+  /// Ensure audio driver is running and occupying audio pipeline
+  bool _startAudioDriver() {
+    if (_bindings == null || _settings == null || _synth == null) return false;
+    if (_settings == nullptr || _synth == nullptr) return false;
+    if (_audioDriver != null && _audioDriver != nullptr) {
+      return true; // Already started
+    }
+
+    try {
+      _audioDriver = _bindings!.newFluidAudioDriver(_settings!, _synth!);
+      if (_audioDriver == null || _audioDriver == nullptr) {
+        debugPrint('Warning: new_fluid_audio_driver returned null. Driver may be unavailable.');
+        return false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Exception starting audio driver: $e');
+      return false;
+    }
+  }
+
+  /// Release audio driver and end audio pipeline occupation
+  void _stopAudioDriver() {
+    if (_bindings == null) return;
+    if (_audioDriver != null && _audioDriver != nullptr) {
+      try {
+        _bindings!.deleteFluidAudioDriver(_audioDriver!);
+      } catch (e) {
+        debugPrint('Exception deleting audio driver: $e');
+      }
+      _audioDriver = null;
     }
   }
 
@@ -305,12 +336,7 @@ class FluidSynthService extends ChangeNotifier {
         _loadedSfPath = null;
       }
 
-      if (_audioDriver != null && _audioDriver != nullptr) {
-        try {
-          b.deleteFluidAudioDriver(_audioDriver!);
-        } catch (_) {}
-        _audioDriver = null;
-      }
+      _stopAudioDriver();
 
       if (_synth != null && _synth != nullptr) {
         try {
@@ -445,6 +471,9 @@ class FluidSynthService extends ChangeNotifier {
     b.fluidSynthSystemReset(_synth!);
     b.fluidSynthSetGain(_synth!, (_volume * 2.0));
 
+    // Ensure audio driver is active to output audio
+    _startAudioDriver();
+
     _player = b.newFluidPlayer(_synth!);
     if (_player == null || _player == nullptr) {
       debugPrint('Failed to create new_fluid_player');
@@ -514,6 +543,9 @@ class FluidSynthService extends ChangeNotifier {
       b.fluidSynthAllSoundsOff(_synth!, -1);
       b.fluidSynthAllNotesOff(_synth!, -1);
     }
+    // Release audio pipeline occupation immediately on pause
+    _stopAudioDriver();
+
     _playbackState = PlaybackState.paused;
     _stopProgressTimer();
     notifyListeners();
@@ -523,6 +555,9 @@ class FluidSynthService extends ChangeNotifier {
   void resume() {
     if (_bindings == null || _player == null || _player == nullptr) return;
     if (_playbackState != PlaybackState.paused) return;
+
+    // Restart audio driver before resuming playback
+    _startAudioDriver();
 
     final b = _bindings!;
     b.fluidPlayerSeek(_player!, _currentTick);
@@ -549,6 +584,8 @@ class FluidSynthService extends ChangeNotifier {
         b.fluidSynthSystemReset(_synth!);
         b.fluidSynthSetGain(_synth!, (_volume * 2.0));
       }
+      // Release audio pipeline occupation immediately on stop
+      _stopAudioDriver();
     }
     _playbackState = PlaybackState.stopped;
     _currentTick = 0;
@@ -634,6 +671,29 @@ class FluidSynthService extends ChangeNotifier {
         }
         return playMidi(_playlist[0]);
       }
+
+      if (_loopMode == LoopMode.none && autoAdvance) {
+        final playedIndices = _shuffleHistory.toSet();
+        if (playedIndices.length >= _playlist.length) {
+          stop();
+          return false;
+        }
+        final unplayed = <int>[];
+        for (int i = 0; i < _playlist.length; i++) {
+          if (!playedIndices.contains(i)) {
+            unplayed.add(i);
+          }
+        }
+        if (unplayed.isEmpty) {
+          stop();
+          return false;
+        }
+        final nextIdx = unplayed[_random.nextInt(unplayed.length)];
+        _playlistIndex = nextIdx;
+        _shuffleHistory.add(nextIdx);
+        return playMidi(_playlist[_playlistIndex]);
+      }
+
       int nextIdx;
       do {
         nextIdx = _random.nextInt(_playlist.length);
@@ -797,16 +857,31 @@ class FluidSynthService extends ChangeNotifier {
       return false;
     }
     final b = _bindings!;
+    final wasDriverActive = (_audioDriver != null && _audioDriver != nullptr);
+    if (!wasDriverActive) {
+      _startAudioDriver();
+    }
     try {
       b.fluidSynthNoteOn(_synth!, 0, 60, 100);
       Future.delayed(const Duration(milliseconds: 400), () {
         if (_synth != null && _synth != nullptr) {
           b.fluidSynthNoteOff(_synth!, 0, 60);
         }
+        // If playback is not active, release audio pipeline after note and reverberation fade
+        if (!wasDriverActive) {
+          Future.delayed(const Duration(milliseconds: 600), () {
+            if (_playbackState != PlaybackState.playing) {
+              _stopAudioDriver();
+            }
+          });
+        }
       });
       return true;
     } catch (e) {
       debugPrint('testNote error: $e');
+      if (!wasDriverActive) {
+        _stopAudioDriver();
+      }
       return false;
     }
   }
@@ -831,7 +906,11 @@ class FluidSynthService extends ChangeNotifier {
               playMidi(_currentMidiPath!);
             }
           } else {
-            playNext(autoAdvance: true);
+            playNext(autoAdvance: true).then((hasMore) {
+              if (!hasMore && _playbackState != PlaybackState.playing) {
+                stop();
+              }
+            });
           }
         }
         notifyListeners();
