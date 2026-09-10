@@ -89,34 +89,34 @@
 
 ```mermaid
 flowchart TB
-    subgraph UI_Layer [UI 介面層 (Flutter)]
-        MainPage[主介面]
-        FileBrowser[檔案瀏覽]
-        PlayerWidget[播放控制器]
-        PlaylistSheet[播放列表]
-        SettingsPage[設定與庫管理]
+    subgraph UI_Layer ["UI 介面層 (Flutter)"]
+        MainPage["主介面"]
+        FileBrowser["檔案瀏覽"]
+        PlayerWidget["播放控制器"]
+        PlaylistSheet["播放列表"]
+        SettingsPage["設定與庫管理"]
     end
 
-    subgraph Service_Layer [業務與狀態層 (Services)]
-        FileService[檔案瀏覽服務]
-        SoundFontService[音色庫管理服務]
-        FluidService[FluidSynth 播放服務]
-        MidiParser[MIDI 檔案解析]
-        AudioHandler[系統媒體整合]
-        I18nService[多語言服務]
+    subgraph Service_Layer ["業務與狀態層 (Services)"]
+        FileService["檔案瀏覽服務"]
+        SoundFontService["音色庫管理服務"]
+        FluidService["FluidSynth 播放服務"]
+        MidiParser["MIDI 檔案解析"]
+        AudioHandler["系統媒體整合"]
+        I18nService["多語言服務"]
     end
 
-    subgraph Native_Layer [原生核心層 (C / FFI)]
-        FFIBindings[Dart FFI 綁定]
-        FFILoader[動態庫載入器]
-        FluidLib[(libfluidsynth 動態庫)]
+    subgraph Native_Layer ["原生核心層 (C / FFI)"]
+        FFIBindings["Dart FFI 綁定"]
+        FFILoader["動態庫載入器"]
+        FluidLib[("libfluidsynth 動態庫")]
     end
 
-    subgraph Audio_Drivers [系統音訊輸出]
-        WASAPI[Windows WASAPI / DSound]
-        CoreAudio[macOS / iOS CoreAudio]
-        Oboe[Android Oboe / OpenSL ES]
-        ALSA[Linux ALSA / PulseAudio]
+    subgraph Audio_Drivers ["系統音訊輸出"]
+        WASAPI["Windows WASAPI / DSound"]
+        CoreAudio["macOS / iOS CoreAudio"]
+        Oboe["Android Oboe / OpenSL ES"]
+        ALSA["Linux ALSA / PulseAudio"]
     end
 
     UI_Layer --> Service_Layer
