@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../i18n/i18n_service.dart';
 import 'fluidsynth_service.dart';
 
@@ -42,7 +43,7 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
           id: currentPath,
           album: sfName,
           title: fluidService.currentMidiTitle ?? 'MIDI Track',
-          artist: 'FluidMIDI',
+          artist: 'SynthBox',
           duration: durationMs > 0 ? Duration(milliseconds: durationMs) : null,
         );
         mediaItem.add(item);
@@ -244,6 +245,17 @@ Future<AudioHandler?> initAudioService(
   I18nService? i18nService,
 }) async {
   try {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final notifStatus = await Permission.notification.status;
+        if (!notifStatus.isGranted) {
+          await Permission.notification.request();
+        }
+      } catch (e) {
+        debugPrint('Notification permission error: $e');
+      }
+    }
+
     return await AudioService.init(
       builder: () => FluidAudioHandler(fluidService, i18nService: i18nService),
       config: const AudioServiceConfig(

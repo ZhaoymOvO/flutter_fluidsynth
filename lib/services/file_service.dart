@@ -97,6 +97,15 @@ class FileService extends ChangeNotifier {
         }
       }
 
+      try {
+        final notifStatus = await Permission.notification.status;
+        if (!notifStatus.isGranted) {
+          await Permission.notification.request();
+        }
+      } catch (e) {
+        debugPrint('Notification permission check error: $e');
+      }
+
       _permissionGranted =
           status.isGranted || await Permission.manageExternalStorage.isGranted;
     } else {
