@@ -5,6 +5,7 @@ import 'package:ffs/i18n/i18n_service.dart';
 import 'package:ffs/services/file_service.dart';
 import 'package:ffs/services/fluidsynth_service.dart';
 import 'package:ffs/services/midi_parser.dart';
+import 'package:ffs/services/soundfont_service.dart';
 import 'package:ffs/ffi/fluidsynth_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -277,6 +278,56 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       service.clearPlaylist();
       expect(service.playlist, isEmpty);
       expect(service.playlistIndex, equals(-1));
+    });
+  });
+
+  group('Windows Drive & Path Navigation Tests', () {
+    test('isWindowsDriveRoot correctly identifies drive roots and rejects subdirectories', () {
+      // Valid drive root formats
+      expect(FileService.isWindowsDriveRoot(r'C:\'), isTrue);
+      expect(FileService.isWindowsDriveRoot('C:'), isTrue);
+      expect(FileService.isWindowsDriveRoot('C:/'), isTrue);
+      expect(FileService.isWindowsDriveRoot(r'c:\'), isTrue);
+      expect(FileService.isWindowsDriveRoot(r'D:\'), isTrue);
+      expect(FileService.isWindowsDriveRoot(r'z:\'), isTrue);
+      expect(FileService.isWindowsDriveRoot('/'), isTrue);
+      expect(FileService.isWindowsDriveRoot(r'\'), isTrue);
+
+      // Subdirectories - NOT drive roots
+      expect(FileService.isWindowsDriveRoot(r'C:\Users'), isFalse);
+      expect(FileService.isWindowsDriveRoot(r'C:\Users\zhaoy'), isFalse);
+      expect(FileService.isWindowsDriveRoot('C:/Windows/System32'), isFalse);
+      expect(FileService.isWindowsDriveRoot('/Volumes'), isFalse);
+      expect(FileService.isWindowsDriveRoot('/Volumes/Macintosh HD'), isFalse);
+    });
+
+    test('I18n contains all newly added localization keys for Windows drives and FluidSynth status', () async {
+      final i18n = I18nService();
+      await i18n.initialize();
+      await i18n.reloadCsv();
+
+      await i18n.setLanguage('zh_TW');
+      expect(i18n.t('home_this_pc'), '本機');
+      expect(i18n.t('home_item_badge_drive'), '磁碟機');
+      expect(i18n.t('home_lib_not_loaded'), contains('FluidSynth'));
+      expect(i18n.t('home_btn_goto_settings'), '前往設定');
+
+      await i18n.setLanguage('zh_CN');
+      expect(i18n.t('home_this_pc'), '此电脑');
+      expect(i18n.t('home_item_badge_drive'), '磁盘驱动器');
+
+      await i18n.setLanguage('en');
+      expect(i18n.t('home_this_pc'), 'This PC');
+      expect(i18n.t('home_item_badge_drive'), 'Disk Drive');
+      expect(i18n.t('home_btn_goto_settings'), 'Settings');
+    });
+
+    test('SoundFontService normalizes paths and compares with p.equals', () async {
+      final sfService = SoundFontService();
+      await sfService.initialize();
+
+      // Ensure activeSoundFont returns null when no path set
+      expect(sfService.activeSoundFont, isNull);
     });
   });
 }

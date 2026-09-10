@@ -1,4 +1,6 @@
+import 'dart:ffi';
 import 'dart:io';
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +19,7 @@ class DiscoveredFileItem {
   final FileCategory category;
   final int sizeInBytes;
   final DateTime? lastModified;
+  final bool isDrive;
 
   DiscoveredFileItem({
     required this.entity,
@@ -25,6 +28,7 @@ class DiscoveredFileItem {
     required this.category,
     required this.sizeInBytes,
     required this.lastModified,
+    this.isDrive = false,
   });
 
   bool get isDirectory => category == FileCategory.directory;
@@ -45,6 +49,8 @@ class FileService extends ChangeNotifier {
   static const Set<String> midiExtensions = {'.mid', '.midi', '.kar'};
   static const Set<String> soundFontExtensions = {'.sf2', '.sf3', '.dls'};
 
+  static const String windowsDrivesPath = 'This PC';
+
   String? _homeDirectoryPath;
   String? _currentDirectoryPath;
   List<DiscoveredFileItem> _currentFiles = [];
@@ -59,8 +65,21 @@ class FileService extends ChangeNotifier {
   bool get permissionGranted => _permissionGranted;
   String? get errorMessage => _errorMessage;
 
+  bool get isDrivesView =>
+      Platform.isWindows && _currentDirectoryPath == windowsDrivesPath;
+
+  /// Detect whether a given path is a Windows drive root (e.g. C:\, C:, C:/, /, \)
+  static bool isWindowsDriveRoot(String path) {
+    final clean = path.replaceAll('/', '\\').trim();
+    return RegExp(r'^[a-zA-Z]:\\?$').hasMatch(clean) || clean == '\\';
+  }
+
   bool get canNavigateUp {
     if (_currentDirectoryPath == null) return false;
+    if (Platform.isWindows && isDrivesView) return false;
+    if (Platform.isWindows && isWindowsDriveRoot(_currentDirectoryPath!)) {
+      return true;
+    }
     final parent = p.dirname(_currentDirectoryPath!);
     return parent != _currentDirectoryPath && parent.isNotEmpty;
   }
@@ -138,6 +157,19 @@ class FileService extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
+    if (Platform.isWindows && isDrivesView) {
+      try {
+        _currentFiles = await getWindowsDrives();
+      } catch (e) {
+        _errorMessage = 'Error getting drives: $e';
+        _currentFiles = [];
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
+      return;
+    }
 
     try {
       final dir = Directory(_currentDirectoryPath!);
@@ -253,13 +285,20 @@ class FileService extends ChangeNotifier {
     } else if (Platform.isLinux) {
       if (Directory('/media').existsSync()) return '/media';
       if (Directory('/mnt').existsSync()) return '/mnt';
+    } else if (Platform.isWindows) {
+      return windowsDrivesPath;
     }
     return '/';
   }
 
   /// Navigate into a subdirectory
   Future<void> navigateTo(String dirPath) async {
-    _currentDirectoryPath = dirPath;
+    if (Platform.isWindows &&
+        (dirPath == '/' || dirPath == '\\' || dirPath == windowsDrivesPath)) {
+      _currentDirectoryPath = windowsDrivesPath;
+    } else {
+      _currentDirectoryPath = dirPath;
+    }
     await scanCurrentDirectory();
   }
 
@@ -271,6 +310,13 @@ class FileService extends ChangeNotifier {
   /// Navigate to parent directory
   Future<void> navigateUp() async {
     if (_currentDirectoryPath == null) return;
+    if (Platform.isWindows) {
+      if (isDrivesView) return;
+      if (isWindowsDriveRoot(_currentDirectoryPath!)) {
+        await navigateToVolumes();
+        return;
+      }
+    }
     final parent = p.dirname(_currentDirectoryPath!);
     if (parent != _currentDirectoryPath && parent.isNotEmpty) {
       _currentDirectoryPath = parent;
@@ -283,5 +329,152 @@ class FileService extends ChangeNotifier {
     if (_homeDirectoryPath == null) return;
     _currentDirectoryPath = _homeDirectoryPath;
     await scanCurrentDirectory();
+  }
+
+  /// Detect all logical drives on Windows with friendly names and types
+  static Future<List<DiscoveredFileItem>> getWindowsDrives() async {
+    final List<DiscoveredFileItem> driveItems = [];
+
+    if (!Platform.isWindows) return driveItems;
+
+    try {
+      final kernel32 = DynamicLibrary.open('kernel32.dll');
+
+      // SetErrorMode to suppress OS error popups for unformatted/empty media
+      try {
+        final setErrorMode = kernel32.lookupFunction<
+            Uint32 Function(Uint32),
+            int Function(int)>('SetErrorMode');
+        setErrorMode(0x0001 | 0x8000);
+      } catch (_) {}
+
+      final getLogicalDrives = kernel32.lookupFunction<
+          Uint32 Function(),
+          int Function()>('GetLogicalDrives');
+      final getDriveType = kernel32.lookupFunction<
+          Uint32 Function(Pointer<Utf16>),
+          int Function(Pointer<Utf16>)>('GetDriveTypeW');
+      final getVolumeInfo = kernel32.lookupFunction<
+          Int32 Function(
+            Pointer<Utf16>,
+            Pointer<Utf16>,
+            Uint32,
+            Pointer<Uint32>,
+            Pointer<Uint32>,
+            Pointer<Uint32>,
+            Pointer<Utf16>,
+            Uint32,
+          ),
+          int Function(
+            Pointer<Utf16>,
+            Pointer<Utf16>,
+            int,
+            Pointer<Uint32>,
+            Pointer<Uint32>,
+            Pointer<Uint32>,
+            Pointer<Utf16>,
+            int,
+          )>('GetVolumeInformationW');
+
+      final mask = getLogicalDrives();
+      for (int i = 0; i < 26; i++) {
+        if ((mask & (1 << i)) != 0) {
+          final letter = String.fromCharCode(65 + i);
+          final drivePath = '$letter:\\';
+          final drivePathPtr = drivePath.toNativeUtf16();
+
+          String label = '';
+          int type = 0;
+
+          try {
+            type = getDriveType(drivePathPtr);
+            if (type == 1) {
+              calloc.free(drivePathPtr);
+              continue;
+            }
+
+            final volNameBuf = calloc<Uint16>(260).cast<Utf16>();
+            try {
+              final ok = getVolumeInfo(
+                drivePathPtr,
+                volNameBuf,
+                260,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                0,
+              );
+              if (ok != 0) {
+                label = volNameBuf.toDartString().trim();
+              }
+            } catch (_) {
+            } finally {
+              calloc.free(volNameBuf);
+            }
+          } finally {
+            calloc.free(drivePathPtr);
+          }
+
+          String displayName;
+          if (label.isNotEmpty) {
+            displayName = '$label ($letter:)';
+          } else {
+            switch (type) {
+              case 2: // DRIVE_REMOVABLE
+                displayName = 'Removable Disk ($letter:)';
+                break;
+              case 3: // DRIVE_FIXED
+                displayName = 'Local Disk ($letter:)';
+                break;
+              case 4: // DRIVE_REMOTE
+                displayName = 'Network Drive ($letter:)';
+                break;
+              case 5: // DRIVE_CDROM
+                displayName = 'CD Drive ($letter:)';
+                break;
+              case 6: // DRIVE_RAMDISK
+                displayName = 'RAM Disk ($letter:)';
+                break;
+              default:
+                displayName = 'Drive ($letter:)';
+            }
+          }
+
+          driveItems.add(DiscoveredFileItem(
+            entity: Directory(drivePath),
+            path: drivePath,
+            name: displayName,
+            category: FileCategory.directory,
+            sizeInBytes: 0,
+            lastModified: null,
+            isDrive: true,
+          ));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting Windows drives via FFI: $e');
+      driveItems.clear();
+      for (int i = 0; i < 26; i++) {
+        final letter = String.fromCharCode(65 + i);
+        final drivePath = '$letter:\\';
+        try {
+          final dir = Directory(drivePath);
+          if (dir.existsSync()) {
+            driveItems.add(DiscoveredFileItem(
+              entity: dir,
+              path: drivePath,
+              name: 'Drive ($letter:)',
+              category: FileCategory.directory,
+              sizeInBytes: 0,
+              lastModified: null,
+              isDrive: true,
+            ));
+          }
+        } catch (_) {}
+      }
+    }
+
+    return driveItems;
   }
 }

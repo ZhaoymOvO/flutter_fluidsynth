@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'fluidsynth_bindings.dart';
 
@@ -48,6 +49,31 @@ class FluidSynthLoader {
     await prefs.remove(prefSideloadPathKey);
   }
 
+  static void _setupWindowsDllDirectory(String path) {
+    if (!Platform.isWindows) return;
+    try {
+      final dir = p.dirname(path);
+      if (dir.isNotEmpty && dir != '.' && Directory(dir).existsSync()) {
+        final kernel32 = DynamicLibrary.open('kernel32.dll');
+        final setDllDirectory = kernel32.lookupFunction<
+            Int32 Function(Pointer<Utf16>),
+            int Function(Pointer<Utf16>)>('SetDllDirectoryW');
+        final dirPtr = dir.toNativeUtf16();
+        setDllDirectory(dirPtr);
+        calloc.free(dirPtr);
+      }
+    } catch (e) {
+      debugPrint('SetDllDirectoryW error: $e');
+    }
+  }
+
+  static DynamicLibrary _openLibrary(String path) {
+    if (Platform.isWindows) {
+      _setupWindowsDllDirectory(path);
+    }
+    return DynamicLibrary.open(path);
+  }
+
   /// Attempts to load FluidSynth, checking sideloaded path first,
   /// then fallback default / system paths.
   static Future<FluidSynthLoadResult> load({String? customPath}) async {
@@ -56,7 +82,7 @@ class FluidSynthLoader {
     // 1. If user provided a sideloaded path, test it first
     if (sideloaded != null && sideloaded.isNotEmpty) {
       try {
-        final lib = DynamicLibrary.open(sideloaded);
+        final lib = _openLibrary(sideloaded);
         final bindings = FluidSynthBindings(lib);
         final versionPtr = bindings.fluidVersionStr();
         final version = versionPtr.toDartString();
@@ -82,7 +108,7 @@ class FluidSynthLoader {
 
     for (final path in candidatePaths) {
       try {
-        final lib = DynamicLibrary.open(path);
+        final lib = _openLibrary(path);
         final bindings = FluidSynthBindings(lib);
         final versionPtr = bindings.fluidVersionStr();
         final version = versionPtr.toDartString();
@@ -111,10 +137,33 @@ class FluidSynthLoader {
         '@rpath/libfluidsynth.dylib',
       ];
     } else if (Platform.isWindows) {
+      final exeDir = p.dirname(Platform.resolvedExecutable);
       return [
-        'fluidsynth.dll',
+        // 1. Next to executable
+        p.join(exeDir, 'libfluidsynth-3.dll'),
+        p.join(exeDir, 'fluidsynth.dll'),
+        p.join(exeDir, 'libfluidsynth.dll'),
+        p.join(exeDir, 'lib', 'libfluidsynth-3.dll'),
+        p.join(exeDir, 'lib', 'fluidsynth.dll'),
+        p.join(exeDir, 'bin', 'libfluidsynth-3.dll'),
+        p.join(exeDir, 'bin', 'fluidsynth.dll'),
+
+        // 2. System PATH bare names
         'libfluidsynth-3.dll',
+        'fluidsynth.dll',
         'libfluidsynth.dll',
+
+        // 3. Common installation paths
+        r'C:\Program Files\FluidSynth\bin\libfluidsynth-3.dll',
+        r'C:\Program Files\FluidSynth\bin\fluidsynth.dll',
+        r'C:\Program Files (x86)\FluidSynth\bin\libfluidsynth-3.dll',
+        r'C:\Program Files (x86)\FluidSynth\bin\fluidsynth.dll',
+        r'C:\msys64\mingw64\bin\libfluidsynth-3.dll',
+        r'C:\msys64\ucrt64\bin\libfluidsynth-3.dll',
+        r'C:\msys64\clang64\bin\libfluidsynth-3.dll',
+        r'C:\vcpkg\installed\x64-windows\bin\fluidsynth.dll',
+        r'C:\vcpkg\installed\x64-windows\bin\libfluidsynth-3.dll',
+        r'C:\tools\fluidsynth\bin\libfluidsynth-3.dll',
       ];
     } else if (Platform.isLinux) {
       return [

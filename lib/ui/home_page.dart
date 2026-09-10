@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import '../i18n/i18n_service.dart';
 import '../services/file_service.dart';
 import '../services/fluidsynth_service.dart';
@@ -114,7 +115,9 @@ class FileBrowserView extends StatelessWidget {
 
     if (item.isMidi) {
       // If tapping the currently active MIDI track and not single-only override, toggle pause/play
-      if (!singleOnly && fluidService.currentMidiPath == item.path) {
+      if (!singleOnly &&
+          fluidService.currentMidiPath != null &&
+          p.equals(fluidService.currentMidiPath!, item.path)) {
         if (fluidService.isPlaying) {
           fluidService.pause();
           return;
@@ -122,6 +125,12 @@ class FileBrowserView extends StatelessWidget {
           fluidService.resume();
           return;
         }
+      }
+
+      // Check if FluidSynth library is loaded!
+      if (!fluidService.isLibraryLoaded) {
+        _showNoFluidSynthDialog(context);
+        return;
       }
 
       // Check if SoundFont is loaded or available
@@ -150,7 +159,7 @@ class FileBrowserView extends StatelessWidget {
             .where((f) => f.isMidi)
             .map((f) => f.path)
             .toList();
-        final idx = allMidi.indexOf(item.path);
+        final idx = allMidi.indexWhere((fPath) => p.equals(fPath, item.path));
         fluidService.setPlaylist(allMidi, initialIndex: idx >= 0 ? idx : 0);
       }
 
@@ -168,14 +177,49 @@ class FileBrowserView extends StatelessWidget {
       // Save SoundFont to known list and activate it!
       final added = await soundFontService.addAndActivateSoundFont(item.path);
       if (added) {
-        await fluidService.loadSoundFont(item.path);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${context.tr('sf_toast_added')}: ${item.name}'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+        if (fluidService.isLibraryLoaded) {
+          final loaded = await fluidService.loadSoundFont(item.path);
+          if (context.mounted) {
+            if (loaded) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${context.tr('sf_toast_added')}: ${item.name}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(context.tr('sf_load_error')),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr('sf_toast_lib_missing')),
+                backgroundColor: Colors.orange.shade800,
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: context.tr('home_btn_goto_settings'),
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SettingsPage(
+                          fluidService: fluidService,
+                          i18nService: i18nService,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
         }
       } else {
         if (context.mounted) {
@@ -188,6 +232,36 @@ class FileBrowserView extends StatelessWidget {
         }
       }
     }
+  }
+
+  void _showNoFluidSynthDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('common_warning')),
+        content: Text(context.tr('home_prompt_lib_not_loaded')),
+        actions: [
+          TextButton(
+            child: Text(context.tr('common_cancel')),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          FilledButton(
+            child: Text(context.tr('home_btn_goto_settings')),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SettingsPage(
+                    fluidService: fluidService,
+                    i18nService: i18nService,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNoSoundFontDialog(BuildContext context) {
@@ -241,7 +315,9 @@ class FileBrowserView extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    fileService.currentDirectoryPath ?? '',
+                    fileService.isDrivesView
+                        ? context.tr('home_this_pc')
+                        : (fileService.currentDirectoryPath ?? ''),
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontFamily: 'monospace',
                     ),
@@ -290,6 +366,42 @@ class FileBrowserView extends StatelessWidget {
           ),
           body: Column(
             children: [
+              // FluidSynth dynamic library not loaded warning banner
+              if (!fluidService.isLibraryLoaded)
+                Container(
+                  color: theme.colorScheme.errorContainer,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: theme.colorScheme.onErrorContainer, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context.tr('home_lib_not_loaded'),
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SettingsPage(
+                                fluidService: fluidService,
+                                i18nService: i18nService,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(context.tr('home_btn_goto_settings')),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Permission check warning if needed
               if (!fileService.permissionGranted)
                 Container(
@@ -393,7 +505,7 @@ class FileBrowserView extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.secondaryContainer,
           child: Icon(
-            Icons.folder_rounded,
+            item.isDrive ? Icons.storage_rounded : Icons.folder_rounded,
             color: theme.colorScheme.onSecondaryContainer,
             size: 20,
           ),
@@ -403,7 +515,9 @@ class FileBrowserView extends StatelessWidget {
           style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          context.tr('home_item_badge_directory'),
+          item.isDrive
+              ? context.tr('home_item_badge_drive')
+              : context.tr('home_item_badge_directory'),
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -418,7 +532,8 @@ class FileBrowserView extends StatelessWidget {
     }
 
     if (item.isMidi) {
-      final isCurrentTrack = fluidService.currentMidiPath == item.path;
+      final isCurrentTrack = fluidService.currentMidiPath != null &&
+          p.equals(fluidService.currentMidiPath!, item.path);
       final isCurrentPlaying = isCurrentTrack && fluidService.isPlaying;
 
       return ListTile(
@@ -519,8 +634,10 @@ class FileBrowserView extends StatelessWidget {
     }
 
     // SoundFont (.sf2 / .sf3 / .dls)
-    final isCurrentSf = (soundFontService.activeSoundFontPath == item.path) ||
-        (fluidService.loadedSfPath == item.path);
+    final isCurrentSf = (soundFontService.activeSoundFontPath != null &&
+            p.equals(soundFontService.activeSoundFontPath!, item.path)) ||
+        (fluidService.loadedSfPath != null &&
+            p.equals(fluidService.loadedSfPath!, item.path));
 
     return ListTile(
       leading: CircleAvatar(

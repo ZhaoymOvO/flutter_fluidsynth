@@ -49,7 +49,7 @@ class SoundFontService extends ChangeNotifier {
   SoundFontItem? get activeSoundFont {
     if (_activeSoundFontPath == null) return null;
     return _knownSoundFonts
-        .where((item) => item.path == _activeSoundFontPath)
+        .where((item) => p.equals(item.path, _activeSoundFontPath!))
         .firstOrNull;
   }
 
@@ -63,8 +63,13 @@ class SoundFontService extends ChangeNotifier {
         final list = jsonDecode(rawJson) as List<dynamic>;
         _knownSoundFonts.clear();
         for (var item in list) {
-          _knownSoundFonts
-              .add(SoundFontItem.fromJson(item as Map<String, dynamic>));
+          final sfItem = SoundFontItem.fromJson(item as Map<String, dynamic>);
+          _knownSoundFonts.add(SoundFontItem(
+            path: p.normalize(sfItem.path),
+            name: sfItem.name,
+            fileSize: sfItem.fileSize,
+            addedAt: sfItem.addedAt,
+          ));
         }
       } catch (e) {
         debugPrint('Error parsing known soundfonts: $e');
@@ -72,10 +77,13 @@ class SoundFontService extends ChangeNotifier {
     }
 
     _activeSoundFontPath = prefs.getString(_prefActiveSoundFontKey);
+    if (_activeSoundFontPath != null) {
+      _activeSoundFontPath = p.normalize(_activeSoundFontPath!);
+    }
 
     // If active path is not valid or not in list, fallback to first if available
     if (_activeSoundFontPath != null &&
-        !_knownSoundFonts.any((e) => e.path == _activeSoundFontPath)) {
+        !_knownSoundFonts.any((e) => p.equals(e.path, _activeSoundFontPath!))) {
       _activeSoundFontPath =
           _knownSoundFonts.isNotEmpty ? _knownSoundFonts.first.path : null;
     } else if (_activeSoundFontPath == null && _knownSoundFonts.isNotEmpty) {
@@ -87,7 +95,8 @@ class SoundFontService extends ChangeNotifier {
   }
 
   /// Adds a SoundFont to the known list (if not already present) and sets it as active
-  Future<bool> addAndActivateSoundFont(String filePath) async {
+  Future<bool> addAndActivateSoundFont(String rawFilePath) async {
+    final filePath = p.normalize(rawFilePath);
     final file = File(filePath);
     if (!await file.exists()) {
       return false;
@@ -98,7 +107,7 @@ class SoundFontService extends ChangeNotifier {
 
     // Check if already in list
     final existingIndex =
-        _knownSoundFonts.indexWhere((e) => e.path == filePath);
+        _knownSoundFonts.indexWhere((e) => p.equals(e.path, filePath));
     if (existingIndex >= 0) {
       // Move to top
       final existing = _knownSoundFonts.removeAt(existingIndex);
@@ -122,8 +131,12 @@ class SoundFontService extends ChangeNotifier {
   }
 
   /// Sets an existing SoundFont as active
-  Future<void> setActiveSoundFont(String filePath) async {
-    if (_activeSoundFontPath == filePath) return;
+  Future<void> setActiveSoundFont(String rawFilePath) async {
+    final filePath = p.normalize(rawFilePath);
+    if (_activeSoundFontPath != null &&
+        p.equals(_activeSoundFontPath!, filePath)) {
+      return;
+    }
     _activeSoundFontPath = filePath;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefActiveSoundFontKey, filePath);
@@ -131,9 +144,11 @@ class SoundFontService extends ChangeNotifier {
   }
 
   /// Removes a SoundFont from the known list
-  Future<void> removeSoundFont(String filePath) async {
-    _knownSoundFonts.removeWhere((e) => e.path == filePath);
-    if (_activeSoundFontPath == filePath) {
+  Future<void> removeSoundFont(String rawFilePath) async {
+    final filePath = p.normalize(rawFilePath);
+    _knownSoundFonts.removeWhere((e) => p.equals(e.path, filePath));
+    if (_activeSoundFontPath != null &&
+        p.equals(_activeSoundFontPath!, filePath)) {
       _activeSoundFontPath =
           _knownSoundFonts.isNotEmpty ? _knownSoundFonts.first.path : null;
     }

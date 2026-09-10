@@ -30,6 +30,11 @@ home_btn_play_single,僅播放此曲目（清空播放列表）,仅播放此曲�
 home_btn_play_playlist,播放並載入當前目錄,播放并载入当前目录,Play & Load Folder,再生してフォルダを読み込む
 home_btn_add_next,加入下一首播放,添加到下一首播放,Play Next,次に再生
 home_toast_added_next,已加入下一首播放,已添加到下一首播放,Added to play next,次に再生に追加しました
+home_this_pc,本機,此电脑,This PC,PC
+home_item_badge_drive,磁碟機,磁盘驱动器,Disk Drive,ドライブ
+home_lib_not_loaded,FluidSynth 核心動態庫未載入，無法播放音樂,FluidSynth 核心动态库未加载，无法播放音乐,FluidSynth library is not loaded. Cannot play MIDI.,FluidSynth ライブラリが読み込まれていません。再生できません。
+home_btn_goto_settings,前往設定,前往设置,Settings,設定へ
+home_prompt_lib_not_loaded,未檢測到 FluidSynth 核心動態庫，無法合成與播放 MIDI 音樂。請至「設定與動態庫」設定動態庫路徑。,未检测到 FluidSynth 核心动态库，无法合成与播放 MIDI 音乐。请至“设置与动态库”设置动态库路径。,FluidSynth dynamic library is not loaded. Please configure the library path in Settings.,FluidSynth 動態ライブラリが読み込まれていません。設定でパスを指定してください。
 
 player_title_now_playing,正在播放,正在播放,Now Playing,再生中
 player_no_track,尚未選擇 MIDI 檔案,尚未选择 MIDI 文件,No MIDI track selected,曲が選択されていません
@@ -68,6 +73,7 @@ sf_toast_added,已將 SoundFont 加入已知清單並啟用,已将 SoundFont 添
 sf_toast_switched,已切換當前 SoundFont,已切换当前 SoundFont,Switched active SoundFont,サウンドフォントを切り替えました
 sf_toast_removed,已從已知清單移除 SoundFont,已从已知列表移除 SoundFont,Removed SoundFont from list,サウンドフォントを削除しました
 sf_load_error,加載 SoundFont 失敗，請確認檔案格式是否正確,加载 SoundFont 失败，请确认文件格式是否正确,Failed to load SoundFont. Please verify file format.,サウンドフォントの読み込みに失敗しました
+sf_toast_lib_missing,已設定預設音色庫，但 FluidSynth 動態庫尚未載入。請先在「設定」中配置動態庫。,已设置默认音色库，但 FluidSynth 动态库尚未加载。请先在“设置”中配置动态库。,SoundFont selected, but FluidSynth is not loaded. Please configure it in Settings.,サウンドフォントを設定しましたが、FluidSynth が読み込まれていません。設定で設定してください。
 
 settings_page_title,軟體設定與庫管理,软件设置与库管理,Settings & Library,設定とライブラリ管理
 settings_section_lib,FluidSynth 動態庫狀態,FluidSynth 动态库状态,FluidSynth Library Status,FluidSynth ライブラリの状態

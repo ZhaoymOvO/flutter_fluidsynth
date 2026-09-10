@@ -328,12 +328,39 @@ class FluidSynthService extends ChangeNotifier {
     }
   }
 
+  /// Converts a path to an 8.3 short path on Windows if needed, ensuring C standard library
+  /// `fopen(path, "rb")` succeeds when paths contain non-ASCII characters (e.g. CJK/Japanese).
+  static String _toNativePath(String path) {
+    if (!Platform.isWindows) return path;
+    try {
+      final kernel32 = DynamicLibrary.open('kernel32.dll');
+      final getShortPathName = kernel32.lookupFunction<
+          Uint32 Function(Pointer<Utf16>, Pointer<Utf16>, Uint32),
+          int Function(Pointer<Utf16>, Pointer<Utf16>, int)>('GetShortPathNameW');
+      final pathPtr = path.toNativeUtf16();
+      final buf = calloc<Uint16>(1024).cast<Utf16>();
+      try {
+        final len = getShortPathName(pathPtr, buf, 1024);
+        if (len > 0) {
+          return buf.toDartString();
+        }
+      } finally {
+        calloc.free(pathPtr);
+        calloc.free(buf);
+      }
+    } catch (e) {
+      debugPrint('GetShortPathNameW fallback: $e');
+    }
+    return path;
+  }
+
   /// Loads a SoundFont file into the active synthesizer
-  Future<bool> loadSoundFont(String filePath) async {
+  Future<bool> loadSoundFont(String rawFilePath) async {
     if (_bindings == null || _synth == null || _synth == nullptr) {
       return false;
     }
 
+    final filePath = p.normalize(rawFilePath);
     final file = File(filePath);
     if (!await file.exists()) {
       return false;
@@ -352,7 +379,8 @@ class FluidSynthService extends ChangeNotifier {
       _loadedSfPath = null;
     }
 
-    final pathPtr = filePath.toNativeUtf8();
+    final nativePath = _toNativePath(filePath);
+    final pathPtr = nativePath.toNativeUtf8();
     final sfId = b.fluidSynthSfLoad(_synth!, pathPtr, 1);
     calloc.free(pathPtr);
 
@@ -390,11 +418,12 @@ class FluidSynthService extends ChangeNotifier {
   }
 
   /// Start playing a MIDI file
-  Future<bool> playMidi(String midiPath) async {
+  Future<bool> playMidi(String rawMidiPath) async {
     if (_bindings == null || _synth == null || _synth == nullptr) {
       return false;
     }
 
+    final midiPath = p.normalize(rawMidiPath);
     final file = File(midiPath);
     if (!await file.exists()) {
       return false;
@@ -422,7 +451,8 @@ class FluidSynthService extends ChangeNotifier {
       return false;
     }
 
-    final pathPtr = midiPath.toNativeUtf8();
+    final nativePath = _toNativePath(midiPath);
+    final pathPtr = nativePath.toNativeUtf8();
     final addRes = b.fluidPlayerAdd(_player!, pathPtr);
     calloc.free(pathPtr);
 
@@ -444,8 +474,10 @@ class FluidSynthService extends ChangeNotifier {
     _currentMidiTitle = p.basename(midiPath);
     _playbackState = PlaybackState.playing;
 
-    if (_playlist.contains(midiPath)) {
-      _playlistIndex = _playlist.indexOf(midiPath);
+    final existingIdx =
+        _playlist.indexWhere((pItem) => p.equals(pItem, midiPath));
+    if (existingIdx >= 0) {
+      _playlistIndex = existingIdx;
     } else {
       _playlist = [midiPath];
       _playlistIndex = 0;

@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 import '../i18n/i18n_service.dart';
 import '../services/fluidsynth_service.dart';
 import '../services/soundfont_service.dart';
@@ -32,14 +33,23 @@ class SoundFontManagerPage extends StatelessWidget {
     if (result != null && result.files.single.path != null) {
       final path = result.files.single.path!;
       final added = await soundFontService.addAndActivateSoundFont(path);
-      if (added) {
+      if (added && fluidService.isLibraryLoaded) {
         await fluidService.loadSoundFont(path);
       }
       if (context.mounted) {
         if (added) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.tr('sf_toast_added'))),
-          );
+          if (fluidService.isLibraryLoaded) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(context.tr('sf_toast_added'))),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr('sf_toast_lib_missing')),
+                backgroundColor: Colors.orange.shade800,
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.tr('sf_load_error'))),
@@ -119,7 +129,8 @@ class SoundFontManagerPage extends StatelessWidget {
                             const Divider(height: 1),
                         itemBuilder: (ctx, index) {
                           final item = knownList[index];
-                          final isActive = item.path == activePath;
+                          final isActive = activePath != null &&
+                              p.equals(item.path, activePath);
 
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(
