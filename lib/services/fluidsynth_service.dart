@@ -100,6 +100,10 @@ class FluidSynthService extends ChangeNotifier {
     return _playlistIndex > 0;
   }
 
+  /// Dedicated ValueNotifier for playback progress tick to avoid rebuilding
+  /// unrelated UI (e.g. file lists, system media controls) on every 100ms timer tick.
+  final ValueNotifier<int> progressNotifier = ValueNotifier<int>(0);
+
   int get currentTick => _currentTick;
   int get totalTicks => _totalTicks;
   int get bpm => _bpm;
@@ -610,6 +614,7 @@ class FluidSynthService extends ChangeNotifier {
     }
     _playbackState = FluidPlaybackState.stopped;
     _currentTick = 0;
+    progressNotifier.value = 0;
     notifyListeners();
   }
 
@@ -620,6 +625,7 @@ class FluidSynthService extends ChangeNotifier {
     final target = tick.clamp(0, _totalTicks);
     b.fluidPlayerSeek(_player!, target);
     _currentTick = target;
+    progressNotifier.value = target;
     notifyListeners();
   }
 
@@ -956,7 +962,7 @@ class FluidSynthService extends ChangeNotifier {
             });
           }
         }
-        notifyListeners();
+        progressNotifier.value = _currentTick;
       }
     });
   }
@@ -969,6 +975,7 @@ class FluidSynthService extends ChangeNotifier {
   @override
   void dispose() {
     _stopProgressTimer();
+    progressNotifier.dispose();
     _teardownEngine();
     super.dispose();
   }

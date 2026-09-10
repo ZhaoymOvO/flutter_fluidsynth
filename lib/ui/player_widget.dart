@@ -194,70 +194,75 @@ class PlayerWidget extends StatelessWidget {
     ThemeData theme,
     bool hasTrack,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: 6,
+    return ValueListenableBuilder<int>(
+      valueListenable: fluidService.progressNotifier,
+      builder: (context, currentTick, _) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 6,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 12,
+                  ),
+                ),
+                child: Slider(
+                  value: (hasTrack && fluidService.totalTicks > 0)
+                      ? currentTick
+                            .clamp(0, fluidService.totalTicks)
+                            .toDouble()
+                      : 0.0,
+                  min: 0.0,
+                  max: (hasTrack && fluidService.totalTicks > 0)
+                      ? fluidService.totalTicks.toDouble()
+                      : 1.0,
+                  onChanged: (hasTrack && fluidService.totalTicks > 0)
+                      ? (val) {
+                          fluidService.seek(val.toInt());
+                        }
+                      : null,
+                ),
               ),
-              overlayShape: const RoundSliderOverlayShape(
-                overlayRadius: 12,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      hasTrack
+                          ? fluidService.formattedCurrentTime
+                          : '00:00',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      hasTrack && fluidService.bpm > 0
+                          ? 'BPM: ${fluidService.bpm}'
+                          : 'BPM: --',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      hasTrack ? fluidService.formattedTotalTime : '00:00',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Slider(
-              value: (hasTrack && fluidService.totalTicks > 0)
-                  ? fluidService.currentTick
-                        .clamp(0, fluidService.totalTicks)
-                        .toDouble()
-                  : 0.0,
-              min: 0.0,
-              max: (hasTrack && fluidService.totalTicks > 0)
-                  ? fluidService.totalTicks.toDouble()
-                  : 1.0,
-              onChanged: (hasTrack && fluidService.totalTicks > 0)
-                  ? (val) {
-                      fluidService.seek(val.toInt());
-                    }
-                  : null,
-            ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  hasTrack
-                      ? fluidService.formattedCurrentTime
-                      : '00:00',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  hasTrack && fluidService.bpm > 0
-                      ? 'BPM: ${fluidService.bpm}'
-                      : 'BPM: --',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  hasTrack ? fluidService.formattedTotalTime : '00:00',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
