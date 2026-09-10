@@ -1,4 +1,4 @@
-import 'dart:ffi';
+import 'dart:ffi' hide Size;
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ffs/i18n/i18n_service.dart';
@@ -9,6 +9,8 @@ import 'package:ffs/services/fluidsynth_service.dart';
 import 'package:ffs/services/midi_parser.dart';
 import 'package:ffs/services/soundfont_service.dart';
 import 'package:ffs/ffi/fluidsynth_loader.dart';
+import 'package:ffs/ui/settings_page.dart';
+import 'package:ffs/ui/home_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -512,6 +514,182 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
       expect(service.isShuffle, isFalse);
     });
   });
+
+  group('SettingsPage Responsive Layout Tests', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    testWidgets('SettingsPage renders without overflow on narrow width (320px)', (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final i18n = I18nService();
+      i18n.parseCsvContent('''control_name,zh_TW,zh_CN,en,ja
+settings_page_title,設定,设置,Settings,設定とライブラリ管理
+settings_section_lib,庫,库,Lib,FluidSynth ライブラリの状態
+settings_lib_status_loaded,已載入,已加载,Loaded,ライブラリは正常に読み込まれました
+settings_lib_status_failed,載入失敗,加载失败,Failed,ライブラリの読み込みに失敗しました
+settings_lib_version,版本,版本,Version,ライブラリバージョン
+settings_lib_path,路徑,路径,Path,読み込みパス
+settings_lib_sideload_tip,提示,提示,Tip,tip
+settings_lib_sideload_btn,手動載入,手动加载,Sideload,FluidSynthを手動読み込み
+settings_lib_reset_btn,重設,重置,Reset,デフォルトに戻す
+settings_section_audio,音訊,音频,Audio,オーディオドライバ設定
+settings_audio_driver_label,音訊驅動,音频驱动,Audio Driver,オーディオドライバ
+player_volume_label,音量,音量,Volume,音量
+settings_btn_test_sound,測試,测试,Test,サウンドテスト (Play C4)
+settings_section_i18n,語言,语言,Language,言語とローカライズ
+settings_language_label,介面語言,界面语言,Interface Language,インターフェース言語
+settings_i18n_show_keys,鍵名,键名,Keys,適応モード：コントロール名を直接表示
+settings_i18n_show_keys_desc,說明,说明,Desc,UIにCSVのcontrol_nameを表示し、翻訳や調整を容易にします
+''');
+      await i18n.setLanguage('ja');
+
+      final fluidService = FluidSynthService();
+
+      await tester.pumpWidget(
+        I18nScope(
+          service: i18n,
+          child: MaterialApp(
+            home: SettingsPage(
+              fluidService: fluidService,
+              i18nService: i18n,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SettingsPage), findsOneWidget);
+      expect(find.text('FluidSynth ライブラリの状態'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.byIcon(Icons.speaker), 100);
+      expect(find.byIcon(Icons.speaker), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.byIcon(Icons.language), 100);
+      expect(find.byIcon(Icons.language), findsOneWidget);
+    });
+
+    testWidgets('SettingsPage renders without overflow on regular width (600px)', (tester) async {
+      tester.view.physicalSize = const Size(600, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final i18n = I18nService();
+      i18n.parseCsvContent('''control_name,zh_TW,zh_CN,en,ja
+settings_page_title,設定,设置,Settings,設定とライブラリ管理
+settings_section_lib,庫,库,Lib,FluidSynth ライブラリの状態
+settings_lib_status_loaded,已載入,已加载,Loaded,ライブラリは正常に読み込まれました
+settings_lib_status_failed,載入失敗,加载失败,Failed,ライブラリの読み込みに失敗しました
+settings_lib_version,版本,版本,Version,ライブラリバージョン
+settings_lib_path,路徑,路径,Path,読み込みパス
+settings_lib_sideload_tip,提示,提示,Tip,tip
+settings_lib_sideload_btn,手動載入,手动加载,Sideload,FluidSynthを手動読み込み
+settings_lib_reset_btn,重設,重置,Reset,デフォルトに戻す
+settings_section_audio,音訊,音频,Audio,オーディオドライバ設定
+settings_audio_driver_label,音訊驅動,音频驱动,Audio Driver,オーディオドライバ
+player_volume_label,音量,音量,Volume,音量
+settings_btn_test_sound,測試,测试,Test,サウンドテスト (Play C4)
+settings_section_i18n,語言,语言,Language,言語とローカライズ
+settings_language_label,介面語言,界面语言,Interface Language,インターフェース言語
+settings_i18n_show_keys,鍵名,键名,Keys,適応モード：コントロール名を直接表示
+settings_i18n_show_keys_desc,說明,说明,Desc,UIにCSVのcontrol_nameを表示し、翻訳や調整を容易にします
+''');
+      await i18n.setLanguage('ja');
+
+      final fluidService = FluidSynthService();
+
+      await tester.pumpWidget(
+        I18nScope(
+          service: i18n,
+          child: MaterialApp(
+            home: SettingsPage(
+              fluidService: fluidService,
+              i18nService: i18n,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SettingsPage), findsOneWidget);
+    });
+  });
+
+  group('App Lifecycle & Background Playback Tests', () {
+    testWidgets('MainNavigationPage preserves playback on paused/hidden/inactive and only stops on detached', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final i18n = I18nService();
+      i18n.parseCsvContent('''control_name,zh_TW,zh_CN,en,ja
+app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プレーヤー
+''');
+      await i18n.setLanguage('en');
+
+      final testFluidService = _LifecycleTestFluidSynthService();
+      final fileService = FileService();
+      final soundFontService = SoundFontService();
+
+      await tester.pumpWidget(
+        I18nScope(
+          service: i18n,
+          child: MaterialApp(
+            home: MainNavigationPage(
+              fileService: fileService,
+              fluidService: testFluidService,
+              soundFontService: soundFontService,
+              i18nService: i18n,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final state = tester.state(find.byType(MainNavigationPage)) as WidgetsBindingObserver;
+
+      expect(testFluidService.stopCallCount, equals(0));
+
+      // 1. Entering background / screen off: AppLifecycleState.paused
+      state.didChangeAppLifecycleState(AppLifecycleState.paused);
+      expect(testFluidService.stopCallCount, equals(0),
+          reason: 'Playback must NOT stop when switching to background (paused)');
+
+      // 2. Window minimized or hidden on desktop: AppLifecycleState.hidden
+      state.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      expect(testFluidService.stopCallCount, equals(0),
+          reason: 'Playback must NOT stop when hidden/minimized');
+
+      // 3. Loss of window focus: AppLifecycleState.inactive
+      state.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      expect(testFluidService.stopCallCount, equals(0),
+          reason: 'Playback must NOT stop when inactive');
+
+      // 4. App process termination / engine detach: AppLifecycleState.detached
+      state.didChangeAppLifecycleState(AppLifecycleState.detached);
+      expect(testFluidService.stopCallCount, equals(1),
+          reason: 'Playback MUST stop when engine is detached');
+    });
+  });
 }
+
+class _LifecycleTestFluidSynthService extends FluidSynthService {
+  int stopCallCount = 0;
+
+  @override
+  void stop() {
+    stopCallCount++;
+    super.stop();
+  }
+}
+
 
 

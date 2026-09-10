@@ -58,10 +58,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     return AppExitResponse.exit;
   }
 
-  /// Terminates playback when app lifecycle transitions to detached/paused
+  /// Terminates playback when app lifecycle transitions to detached (app is killed/destroyed).
+  /// Note: paused state is NOT stopped so background playback continues on mobile and desktop.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.detached || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.detached) {
       widget.fluidService.stop();
     }
   }

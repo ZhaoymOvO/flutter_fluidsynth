@@ -94,6 +94,7 @@ class SettingsPage extends StatelessWidget {
                     children: [
                       // Status Badge
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             fluidService.isLibraryLoaded
@@ -160,35 +161,50 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      // Sideload & Reset Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              icon: const Icon(Icons.folder_open, size: 18),
-                              label: Text(
-                                context.tr('settings_lib_sideload_btn'),
-                              ),
-                              onPressed: () => _sideloadLibrary(context),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
-                            child: Text(context.tr('settings_lib_reset_btn')),
-                            onPressed: () async {
-                              await fluidService.resetToDefaultLibrary();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      context.tr('settings_lib_reset_btn'),
-                                    ),
+                      // Sideload & Reset Buttons (wrap if width is tight)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: FilledButton.icon(
+                                  icon: const Icon(Icons.folder_open, size: 18),
+                                  label: Text(
+                                    context.tr('settings_lib_sideload_btn'),
                                   ),
-                                );
-                              }
-                            },
-                          ),
-                        ],
+                                  onPressed: () => _sideloadLibrary(context),
+                                ),
+                              ),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: OutlinedButton(
+                                  child: Text(
+                                    context.tr('settings_lib_reset_btn'),
+                                  ),
+                                  onPressed: () async {
+                                    await fluidService.resetToDefaultLibrary();
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            context.tr('settings_lib_reset_btn'),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -214,34 +230,28 @@ class SettingsPage extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.speaker),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              context.tr('settings_audio_driver_label'),
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                          DropdownButton<String>(
-                            value: fluidService.audioDriverName,
-                            underline: const SizedBox(),
-                            items: fluidService.availableAudioDrivers
-                                .map(
-                                  (driver) => DropdownMenuItem(
-                                    value: driver,
-                                    child: Text(driver),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                fluidService.setAudioDriver(val);
-                              }
-                            },
-                          ),
-                        ],
+                      // Audio Driver Selection (Adaptive Wrap)
+                      _buildAdaptiveDropdownTile<String>(
+                        context: context,
+                        icon: const Icon(Icons.speaker),
+                        label: context.tr('settings_audio_driver_label'),
+                        value: fluidService.audioDriverName,
+                        items: fluidService.availableAudioDrivers
+                            .map(
+                              (driver) => DropdownMenuItem(
+                                value: driver,
+                                child: Text(
+                                  driver,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            fluidService.setAudioDriver(val);
+                          }
+                        },
                       ),
                       const Divider(height: 24),
                       // Volume Slider
@@ -312,43 +322,35 @@ class SettingsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Language Selection
-                      Row(
-                        children: [
-                          const Icon(Icons.language),
-                          const SizedBox(width: 12),
-                          Expanded(
+                      // Language Selection (Adaptive Wrap)
+                      _buildAdaptiveDropdownTile<String>(
+                        context: context,
+                        icon: const Icon(Icons.language),
+                        label: context.tr('settings_language_label'),
+                        value: i18nService.currentLanguage,
+                        items: [
+                          DropdownMenuItem(
+                            value: 'auto',
                             child: Text(
-                              context.tr('settings_language_label'),
-                              style: theme.textTheme.titleMedium,
+                              i18nService.getLanguageDisplayName('auto'),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          DropdownButton<String>(
-                            value: i18nService.currentLanguage,
-                            underline: const SizedBox(),
-                            items: [
-                              DropdownMenuItem(
-                                value: 'auto',
-                                child: Text(
-                                  i18nService.getLanguageDisplayName('auto'),
-                                ),
+                          ...i18nService.supportedLanguages.map(
+                            (lang) => DropdownMenuItem(
+                              value: lang,
+                              child: Text(
+                                i18nService.getLanguageDisplayName(lang),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              ...i18nService.supportedLanguages.map(
-                                (lang) => DropdownMenuItem(
-                                  value: lang,
-                                  child: Text(
-                                    i18nService.getLanguageDisplayName(lang),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) {
-                                i18nService.setLanguage(val);
-                              }
-                            },
+                            ),
                           ),
                         ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            i18nService.setLanguage(val);
+                          }
+                        },
                       ),
 
                       const Divider(height: 24),
@@ -399,27 +401,164 @@ class SettingsPage extends StatelessWidget {
   }
 
   Widget _buildInfoRow(BuildContext context, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 90,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 280) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 100,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
+            Expanded(
+              child: Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAdaptiveDropdownTile<T>({
+    required BuildContext context,
+    required Widget icon,
+    required String label,
+    required T value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textDirection = Directionality.of(context);
+
+        // Measure label text width
+        final labelPainter = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: theme.textTheme.titleMedium,
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
+          textDirection: textDirection,
+          maxLines: 1,
+        )..layout();
+
+        // Measure widest dropdown item text
+        double maxItemWidth = 0;
+        for (final item in items) {
+          final child = item.child;
+          String text = '';
+          if (child is Text) {
+            text = child.data ?? '';
+          }
+          final itemPainter = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: theme.textTheme.bodyMedium,
+            ),
+            textDirection: textDirection,
+            maxLines: 1,
+          )..layout();
+          if (itemPainter.width > maxItemWidth) {
+            maxItemWidth = itemPainter.width;
+          }
+        }
+
+        // Icon(24) + spacing(12) + label + gap(16) + dropdown(item + arrow(24) + padding(24))
+        final totalNeeded = 24 + 12 + labelPainter.width + 16 + maxItemWidth + 48;
+        final isWideEnough = constraints.maxWidth >= totalNeeded;
+
+        if (isWideEnough) {
+          return Row(
+            children: [
+              icon,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(width: 8),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<T>(
+                  value: value,
+                  items: items,
+                  onChanged: onChanged,
+                ),
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  icon,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<T>(
+                    value: value,
+                    isExpanded: true,
+                    items: items,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 }
