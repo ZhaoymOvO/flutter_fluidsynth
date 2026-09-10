@@ -1,5 +1,7 @@
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import '../i18n/i18n_service.dart';
 import '../services/file_service.dart';
@@ -66,29 +68,74 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: FileBrowserView(
-              fileService: widget.fileService,
-              fluidService: widget.fluidService,
-              soundFontService: widget.soundFontService,
-              i18nService: widget.i18nService,
+    return ListenableBuilder(
+      listenable: widget.fileService,
+      builder: (context, _) {
+        return PopScope(
+          canPop: !widget.fileService.canNavigateUp,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (widget.fileService.canNavigateUp) {
+              widget.fileService.navigateUp();
+            }
+          },
+          child: Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent) {
+                final isBrowserBack = event.logicalKey == LogicalKeyboardKey.browserBack ||
+                    event.logicalKey == LogicalKeyboardKey.goBack;
+                final isAltUp = HardwareKeyboard.instance.isAltPressed &&
+                    event.logicalKey == LogicalKeyboardKey.arrowUp;
+                final isCmdUp = HardwareKeyboard.instance.isMetaPressed &&
+                    event.logicalKey == LogicalKeyboardKey.arrowUp;
+
+                if (isBrowserBack || isAltUp || isCmdUp) {
+                  if (widget.fileService.canNavigateUp) {
+                    widget.fileService.navigateUp();
+                    return KeyEventResult.handled;
+                  }
+                }
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (event) {
+                if ((event.buttons & kBackMouseButton) != 0) {
+                  if (widget.fileService.canNavigateUp) {
+                    widget.fileService.navigateUp();
+                  }
+                }
+              },
+              child: Scaffold(
+                body: Column(
+                  children: [
+                    Expanded(
+                      child: FileBrowserView(
+                        fileService: widget.fileService,
+                        fluidService: widget.fluidService,
+                        soundFontService: widget.soundFontService,
+                        i18nService: widget.i18nService,
+                      ),
+                    ),
+                    // Persistent Player Bar
+                    ListenableBuilder(
+                      listenable: Listenable.merge([widget.fluidService, widget.soundFontService]),
+                      builder: (ctx, _) {
+                        return PlayerWidget(
+                          fluidService: widget.fluidService,
+                          soundFontService: widget.soundFontService,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          // Persistent Player Bar
-          ListenableBuilder(
-            listenable: Listenable.merge([widget.fluidService, widget.soundFontService]),
-            builder: (ctx, _) {
-              return PlayerWidget(
-                fluidService: widget.fluidService,
-                soundFontService: widget.soundFontService,
-              );
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -425,28 +472,6 @@ class FileBrowserView extends StatelessWidget {
                   ),
                 ),
 
-              // Quick instruction strip
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${context.tr('home_tip_click_midi')} • ${context.tr('home_tip_click_soundfont')}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
               // Loading indicator or file list
               Expanded(
@@ -570,64 +595,24 @@ class FileBrowserView extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 追加按鈕 (Add to playlist as next) - 修改按鈕樣式為 filledTonal
-            IconButton.filledTonal(
-              tooltip: context.tr('home_btn_add_next'),
-              icon: const Icon(Icons.playlist_add_rounded, size: 20),
-              style: IconButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(6),
+        trailing: IconButton.filledTonal(
+          tooltip: context.tr('home_btn_add_next'),
+          icon: const Icon(Icons.playlist_add_rounded, size: 20),
+          style: IconButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.all(6),
+          ),
+          onPressed: () {
+            fluidService.addToPlaylistNext(item.path);
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${context.tr('home_toast_added_next')}: ${item.name}'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
               ),
-              onPressed: () {
-                fluidService.addToPlaylistNext(item.path);
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${context.tr('home_toast_added_next')}: ${item.name}'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 4),
-
-            // 僅播放當前曲目 (清空播放列表)
-            IconButton(
-              tooltip: context.tr('home_btn_play_single'),
-              icon: const Icon(Icons.music_note_outlined, size: 22),
-              onPressed: () => _handleFileClick(context, item, singleOnly: true),
-            ),
-            const SizedBox(width: 4),
-
-            // 播放 / 暫停狀態按鈕 (點擊播放並載入當前目錄列表)
-            IconButton(
-              tooltip: isCurrentPlaying
-                  ? context.tr('player_btn_pause')
-                  : context.tr('home_btn_play_playlist'),
-              icon: Icon(
-                isCurrentPlaying
-                    ? Icons.pause_circle_filled_rounded
-                    : Icons.play_circle_filled_rounded,
-                color: isCurrentTrack
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-                size: 32,
-              ),
-              onPressed: () {
-                if (isCurrentPlaying) {
-                  fluidService.pause();
-                } else if (isCurrentTrack && fluidService.isPaused) {
-                  fluidService.resume();
-                } else {
-                  _handleFileClick(context, item);
-                }
-              },
-            ),
-          ],
+            );
+          },
         ),
         onTap: () => _handleFileClick(context, item),
       );

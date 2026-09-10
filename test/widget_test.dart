@@ -1,6 +1,5 @@
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ffs/i18n/i18n_service.dart';
 import 'package:ffs/services/file_service.dart';
@@ -8,6 +7,9 @@ import 'package:ffs/services/fluidsynth_service.dart';
 import 'package:ffs/services/midi_parser.dart';
 import 'package:ffs/services/soundfont_service.dart';
 import 'package:ffs/ffi/fluidsynth_loader.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -352,6 +354,90 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
 
       // Ensure activeSoundFont returns null when no path set
       expect(sfService.activeSoundFont, isNull);
+    });
+  });
+
+  group('Back Navigation Widget Logic Tests', () {
+    testWidgets('PopScope, mouse side button, and browser back key trigger callback when canNavigateUp is true', (tester) async {
+      int backCount = 0;
+      bool canNavigateUp = true;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              return PopScope(
+                canPop: !canNavigateUp,
+                onPopInvokedWithResult: (didPop, result) {
+                  if (didPop) return;
+                  if (canNavigateUp) {
+                    backCount++;
+                  }
+                },
+                child: Focus(
+                  autofocus: true,
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      final isBrowserBack = event.logicalKey == LogicalKeyboardKey.browserBack ||
+                          event.logicalKey == LogicalKeyboardKey.goBack;
+                      final isAltUp = HardwareKeyboard.instance.isAltPressed &&
+                          event.logicalKey == LogicalKeyboardKey.arrowUp;
+                      final isCmdUp = HardwareKeyboard.instance.isMetaPressed &&
+                          event.logicalKey == LogicalKeyboardKey.arrowUp;
+
+                      if (isBrowserBack || isAltUp || isCmdUp) {
+                        if (canNavigateUp) {
+                          backCount++;
+                          return KeyEventResult.handled;
+                        }
+                      }
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerDown: (event) {
+                      if ((event.buttons & kBackMouseButton) != 0) {
+                        if (canNavigateUp) {
+                          backCount++;
+                        }
+                      }
+                    },
+                    child: const Scaffold(body: Text('Navigation Test View')),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 1. Android back button (handlePopRoute)
+      await tester.binding.handlePopRoute();
+      expect(backCount, equals(1));
+
+      // 2. Mouse side button (kBackMouseButton = 8)
+      final center = tester.getCenter(find.text('Navigation Test View'));
+      final gesture = await tester.startGesture(center, buttons: kBackMouseButton, kind: PointerDeviceKind.mouse);
+      await gesture.up();
+      expect(backCount, equals(2));
+
+      // 3. Browser back keyboard key (Windows / Desktop)
+      await tester.sendKeyEvent(LogicalKeyboardKey.browserBack, platform: 'windows');
+      expect(backCount, equals(3));
+
+      // 4. Alt + UpArrow (Windows / Linux)
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      expect(backCount, equals(4));
+
+      // 5. Cmd + UpArrow (macOS)
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      expect(backCount, equals(5));
     });
   });
 }

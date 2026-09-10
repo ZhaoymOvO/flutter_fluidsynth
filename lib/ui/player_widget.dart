@@ -177,26 +177,21 @@ class PlayerWidget extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Centered Playback Controls (3 left, Play/Pause center, 3 right)
+                    // Centered Playback Controls: Shuffle (small), Previous, Play/Pause, Next, Loop (small)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 1. 上一首 (Previous)
-                        IconButton(
-                          tooltip: context.tr('player_btn_prev'),
-                          icon: const Icon(Icons.skip_previous_rounded),
-                          onPressed: hasTrack && fluidService.hasPrevious
-                              ? () => fluidService.playPrevious()
-                              : null,
-                        ),
-                        const SizedBox(width: 4),
-
-                        // 2. 隨機播放 (Shuffle)
+                        // 1. 隨機播放 (Shuffle) - 縮小並移至上一首外側
                         IconButton(
                           tooltip: fluidService.isShuffle
                               ? context.tr('player_btn_shuffle_on')
                               : context.tr('player_btn_shuffle_off'),
+                          iconSize: 20,
+                          style: IconButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.all(6),
+                          ),
                           icon: Icon(
                             Icons.shuffle_rounded,
                             color: fluidService.isShuffle
@@ -205,17 +200,19 @@ class PlayerWidget extends StatelessWidget {
                           ),
                           onPressed: () => fluidService.toggleShuffle(),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
 
-                        // 3. 停止播放 (Stop)
-                        IconButton.filledTonal(
-                          tooltip: context.tr('player_btn_stop'),
-                          icon: const Icon(Icons.stop_rounded),
-                          onPressed: hasTrack ? () => fluidService.stop() : null,
+                        // 2. 上一首 (Previous)
+                        IconButton(
+                          tooltip: context.tr('player_btn_prev'),
+                          icon: const Icon(Icons.skip_previous_rounded),
+                          onPressed: hasTrack && fluidService.hasPrevious
+                              ? () => fluidService.playPrevious()
+                              : null,
                         ),
                         const SizedBox(width: 8),
 
-                        // 4. 暫停 | 播放 (Play / Pause)
+                        // 3. 暫停 | 播放 (Play / Pause)
                         IconButton.filled(
                           tooltip: isPlaying
                               ? context.tr('player_btn_pause')
@@ -237,82 +234,28 @@ class PlayerWidget extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
 
-                        // 5. 音量調節 (Volume Popup)
-                        PopupMenuButton<void>(
-                          tooltip: context.tr('player_volume_label'),
-                          icon: Icon(
-                            fluidService.volume > 0.5
-                                ? Icons.volume_up_rounded
-                                : fluidService.volume > 0
-                                    ? Icons.volume_down_rounded
-                                    : Icons.volume_mute_rounded,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          itemBuilder: (ctx) => [
-                            PopupMenuItem(
-                              enabled: false,
-                              child: StatefulBuilder(
-                                builder: (context, setMenuState) {
-                                  return ListenableBuilder(
-                                    listenable: fluidService,
-                                    builder: (context, _) {
-                                      return SizedBox(
-                                        width: 200,
-                                        child: Row(
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.volume_mute, size: 18),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(),
-                                              tooltip: context.tr('player_volume_label'),
-                                              onPressed: () {
-                                                setMenuState(() {
-                                                  fluidService.setVolume(0.0);
-                                                });
-                                              },
-                                            ),
-                                            Expanded(
-                                              child: Slider(
-                                                value: fluidService.volume.clamp(0.0, 1.0),
-                                                min: 0.0,
-                                                max: 1.0,
-                                                onChanged: (val) {
-                                                  setMenuState(() {
-                                                    fluidService.setVolume(val);
-                                                  });
-                                                },
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.volume_up, size: 18),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(),
-                                              tooltip: context.tr('player_volume_label'),
-                                              onPressed: () {
-                                                setMenuState(() {
-                                                  fluidService.setVolume(1.0);
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                        // 4. 下一首 (Next)
+                        IconButton(
+                          tooltip: context.tr('player_btn_next'),
+                          icon: const Icon(Icons.skip_next_rounded),
+                          onPressed: hasTrack && fluidService.hasNext
+                              ? () => fluidService.playNext()
+                              : null,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
 
-                        // 6. 循環模式 (Loop Mode)
+                        // 5. 循環模式 (Loop Mode) - 縮小並移至下一首外側
                         IconButton(
                           tooltip: fluidService.loopMode == LoopMode.none
                               ? context.tr('player_loop_none')
                               : fluidService.loopMode == LoopMode.playlist
                                   ? context.tr('player_loop_playlist')
                                   : context.tr('player_loop_single'),
+                          iconSize: 20,
+                          style: IconButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.all(6),
+                          ),
                           icon: Icon(
                             fluidService.loopMode == LoopMode.single
                                 ? Icons.repeat_one_rounded
@@ -323,20 +266,10 @@ class PlayerWidget extends StatelessWidget {
                           ),
                           onPressed: () => fluidService.cycleLoopMode(),
                         ),
-                        const SizedBox(width: 4),
-
-                        // 7. 下一首 (Next)
-                        IconButton(
-                          tooltip: context.tr('player_btn_next'),
-                          icon: const Icon(Icons.skip_next_rounded),
-                          onPressed: hasTrack && fluidService.hasNext
-                              ? () => fluidService.playNext()
-                              : null,
-                        ),
                       ],
                     ),
 
-                    // 8. 播放列表按鈕（右對齊）
+                    // 6. 播放列表按鈕（右對齊）
                     Positioned(
                       right: 8,
                       child: IconButton(
