@@ -688,6 +688,94 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
         );
       },
     );
+
+    test(
+      'media session survives stop while a track is loaded (Android media card regression)',
+      () {
+        final service = _LoadedTrackFluidSynthService();
+        final handler = FluidAudioHandler(service);
+
+        // A loaded track that is stopped must keep the session alive. Reporting
+        // idle here makes the native AudioService call stop(), which runs
+        // mediaSession.setActive(false) and cancels the notification — tearing
+        // down the Android media controls entirely.
+        expect(service.playbackState, equals(FluidPlaybackState.stopped));
+        expect(service.currentMidiPath, isNotNull);
+        expect(
+          handler.playbackState.value.processingState,
+          equals(AudioProcessingState.ready),
+          reason:
+              'stopping playback with a track loaded must not deactivate the '
+              'media session',
+        );
+        expect(handler.playbackState.value.playing, isFalse);
+
+        // Stopping again must keep reporting ready, never idle.
+        service.stop();
+        expect(
+          handler.playbackState.value.processingState,
+          equals(AudioProcessingState.ready),
+        );
+      },
+    );
+
+    test('media session releases only when no track is loaded', () {
+      final handler = FluidAudioHandler(FluidSynthService());
+      expect(
+        handler.playbackState.value.processingState,
+        equals(AudioProcessingState.idle),
+      );
+    });
+
+    test(
+      'media item always carries a duration so the Android seek bar renders',
+      () {
+        // A null MediaItem.duration makes audio_service omit
+        // MediaMetadataCompat.METADATA_KEY_DURATION, and Android then draws no
+        // seek bar on the media card at all.
+        final handler = FluidAudioHandler(_PlayingWithoutTempoMapService());
+
+        final item = handler.mediaItem.value;
+        expect(item, isNotNull);
+        expect(
+          item!.duration,
+          isNotNull,
+          reason:
+              'duration must fall back to the elapsed position when the tempo '
+              'map has no total time yet',
+        );
+        expect(item.duration!.inMilliseconds, greaterThan(0));
+      },
+    );
+
+    test('playback state reports an advancing position while playing', () {
+      final service = _PlayingWithoutTempoMapService();
+      final handler = FluidAudioHandler(service);
+
+      expect(handler.playbackState.value.playing, isTrue);
+      expect(handler.playbackState.value.speed, equals(1.0));
+      expect(
+        handler.playbackState.value.processingState,
+        equals(AudioProcessingState.ready),
+      );
+
+      // The media card reads its position from PlaybackState. FluidSynthService
+      // publishes progress through progressNotifier rather than
+      // notifyListeners, so the handler must forward those ticks or the seek bar
+      // never advances.
+      expect(
+        handler.playbackState.value.updatePosition,
+        equals(const Duration(milliseconds: 2500)),
+      );
+
+      service.position = 99.0;
+      service.progressNotifier.value = 9900;
+      expect(
+        handler.playbackState.value.updatePosition,
+        equals(const Duration(milliseconds: 99000)),
+        reason: 'a progress tick must republish PlaybackState',
+      );
+    });
   });
 
   group('SettingsPage Responsive Layout Tests', () {
@@ -1396,4 +1484,37 @@ class _LifecycleTestFluidSynthService extends FluidSynthService {
     stopCallCount++;
     super.stop();
   }
+}
+
+/// Reports a loaded-but-not-playing track. Used to assert that the media session
+/// stays registered after playback stops, which is what keeps the Android 11+
+/// Quick Settings media card on screen.
+class _LoadedTrackFluidSynthService extends FluidSynthService {
+  @override
+  String? get currentMidiPath => '/music/loaded-track.mid';
+
+  @override
+  String? get currentMidiTitle => 'loaded-track.mid';
+}
+
+/// Same as [_LoadedTrackFluidSynthService] but models the state right after
+/// FluidSynth starts a player, before it has a usable tempo map: the track is
+/// playing yet no total time is known. Android needs a non-null
+/// MediaItem.duration to render the media card's seek bar, so the handler must
+/// still publish a usable duration.
+class _PlayingWithoutTempoMapService extends _LoadedTrackFluidSynthService {
+  /// Mutable so a test can simulate playback progressing.
+  double position = 2.5;
+
+  @override
+  FluidPlaybackState get playbackState => FluidPlaybackState.playing;
+
+  @override
+  bool get isPlaying => true;
+
+  @override
+  double get totalTimeInSeconds => 0.0;
+
+  @override
+  double get currentTimeInSeconds => position;
 }

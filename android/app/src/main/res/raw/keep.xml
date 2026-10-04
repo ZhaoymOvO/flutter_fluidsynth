@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resource-shrinker keep rules for SynthBox.
+
+  The release build runs the R8 resource shrinker (see
+  build/app/outputs/mapping/release/resources.txt). It decides reachability by
+  scanning bytecode and XML for resource *references*. Every drawable below is
+  referenced only from Dart, as a string, on the platform channel:
+
+      MediaControl.custom(androidIcon: 'drawable/ic_shuffle_on', ...)
+      AudioServiceConfig(androidNotificationIcon: 'drawable/ic_stat_synthbox')
+
+  Flutter's Dart AOT snapshot is opaque to the shrinker, so it classified all of
+  them as unreachable and stripped them out of the release APK entirely:
+
+      @io.github.zhaoymovo.ffs:drawable/ic_shuffle_on : reachable=false
+
+  At runtime com.ryanheise.audioservice.AudioService resolves those names with
+  Resources.getIdentifier(...), which returns 0 once the resource is gone. A
+  small-icon resource id of 0 makes NotificationCompat.Builder.build() throw, so
+  buildNotification() never returns and startForeground() never posts anything.
+  Android 11+ derives the Quick Settings / lock-screen media card from that
+  notification, so the observable symptom is that the system media controls
+  NEVER appear — even though the MediaSession itself is created and activated
+  correctly, and even though audio keeps playing.
+
+  Do not remove these entries, and add one for every new icon that Dart names as
+  a string. A Dart-only reference is invisible to the shrinker.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_shuffle_on,@drawable/ic_shuffle_off,@drawable/ic_repeat_one,@drawable/ic_repeat_all,@drawable/ic_repeat_none,@drawable/ic_stat_synthbox" />

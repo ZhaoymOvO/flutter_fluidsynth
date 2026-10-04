@@ -1,0 +1,37 @@
+<!--
+  Status bar icon for the SynthBox media notification.
+
+  Android renders setSmallIcon() resources as a monochrome mask: every pixel
+  with alpha > 0 is painted with the system's notification colour, whatever
+  colour is declared here. This resource must therefore be a flat silhouette on
+  a transparent background, with no gradients and no baked-in colour — which is
+  exactly why the colourised @mipmap/ic_launcher launcher icon must not be used
+  as the notification icon.
+
+  The glyph is deliberately simple. A status bar icon is rasterised at roughly
+  18-24dp, so the app logo (two long diagonals with white gutters only ~1
+  viewport unit wide) collapses into an indistinct blob at that size. Legibility
+  beats brand fidelity here, hence a beamed eighth note.
+
+  Geometry: notehead ellipse centred (8, 17.4) with radii 4.1 x 3.2, a stem
+  rising to y=3.2, and a flag sweeping to x=19. Highest ink is y=3.2 and lowest
+  y=20.6, keeping the glyph inside the inner safe area of the 24dp bounds.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Notehead -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.9,17.4a4.1,3.2 0 1,0 8.2,0a4.1,3.2 0 1,0 -8.2,0Z" />
+    <!-- Stem, widening slightly towards the top -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.2,15.7L16,3.2L19.6,3.2L14.8,15.7Z" />
+    <!-- Flag sweeping right from the top of the stem -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,3.2L19,3.2L19,9.4L16.6,5.8Z" />
+</vector>

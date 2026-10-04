@@ -73,7 +73,7 @@ sf_toast_added,已將 SoundFont 加入已知清單並啟用,已将 SoundFont 添
 sf_toast_switched,已切換當前 SoundFont,已切换当前 SoundFont,Switched active SoundFont,サウンドフォントを切り替えました
 sf_toast_removed,已從已知清單移除 SoundFont,已从已知列表移除 SoundFont,Removed SoundFont from list,サウンドフォントを削除しました
 sf_load_error,加載 SoundFont 失敗，請確認檔案格式是否正確,加载 SoundFont 失败，请确认文件格式是否正确,Failed to load SoundFont. Please verify file format.,サウンドフォントの読み込みに失敗しました
-sf_toast_lib_missing,已設定預設音色庫，但 FluidSynth 動態庫尚未載入。請先在「設定」中配置動態庫。,已设置默认音色库，但 FluidSynth 动态库尚未加载。请先在“设置”中配置动态库。,SoundFont selected, but FluidSynth is not loaded. Please configure it in Settings.,サウンドフォントを設定しましたが、FluidSynth が読み込まれていません。設定で設定してください。
+sf_toast_lib_missing,已設定預設音色庫，但 FluidSynth 動態庫尚未載入。請先在「設定」中配置動態庫。,已设置默认音色库，但 FluidSynth 动态库尚未加载。请先在“设置”中配置动态库。,"SoundFont selected, but FluidSynth is not loaded. Please configure it in Settings.",サウンドフォントを設定しましたが、FluidSynth が読み込まれていません。設定で設定してください。
 
 settings_page_title,軟體設定與庫管理,软件设置与库管理,Settings & Library,設定とライブラリ管理
 settings_section_lib,FluidSynth 動態庫狀態,FluidSynth 动态库状态,FluidSynth Library Status,FluidSynth ライブラリの状態
@@ -89,6 +89,8 @@ settings_audio_driver_label,音訊驅動類型,音频驱动类型,Audio Driver,�
 settings_btn_test_sound,發聲測試 (Play C4),发声测试 (Play C4),Test Sound (Play C4),サウンドテスト (Play C4)
 settings_test_sound_success,已發送測試音符,已发送测试音符,Test note sent successfully,テスト音を送信しました
 settings_test_sound_failed,發聲測試失敗，請檢查庫與 SoundFont,发声测试失败，请检查库与 SoundFont,Sound test failed. Check library and SoundFont.,サウンドテストに失敗しました
+settings_notif_perm_warning,未授予通知權限：Android 的系統媒體控制項需要媒體通知才會顯示，請允許通知,未授予通知权限：Android 的系统媒体控制项需要媒体通知才会显示，请允许通知,Notification permission is denied. Android shows its system media controls only when the media notification is allowed.,通知が許可されていません。Android のシステムメディアコントロールはメディア通知が許可されている場合のみ表示されます。
+settings_notif_perm_grant,開啟通知設定,打开通知设置,Open Notification Settings,通知設定を開く
 settings_section_i18n,語言與本地化適配,语言与本地化适配,Language & Localization,言語とローカライズ
 settings_language_label,介面語言,界面语言,Interface Language,インターフェース言語
 settings_lang_auto,跟隨系統,跟随系统,System Default,システムに従う

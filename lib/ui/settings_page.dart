@@ -1,7 +1,10 @@
+import 'dart:io' show Platform;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 import '../i18n/i18n_service.dart';
+import '../services/audio_handler.dart';
 import '../services/fluidsynth_service.dart';
 import '../services/soundfont_service.dart';
 import 'soundfont_dialog.dart';
@@ -433,6 +436,51 @@ class SettingsPage extends StatelessWidget {
                         },
                       ),
                       const Divider(height: 24),
+                      // Android: without the notification permission the system
+                      // silently drops the media notification, and Android 11+
+                      // derives the Quick Settings / lock screen media card from
+                      // it — so the media controls would never appear.
+                      if (Platform.isAndroid &&
+                          !androidNotificationPermissionGranted) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.notifications_off,
+                                color: theme.colorScheme.onErrorContainer,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  context.tr('settings_notif_perm_warning'),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.settings),
+                            label: Text(
+                              context.tr('settings_notif_perm_grant'),
+                            ),
+                            onPressed: openAppSettings,
+                          ),
+                        ),
+                        const Divider(height: 24),
+                      ],
                       // Test sound button
                       SizedBox(
                         width: double.infinity,

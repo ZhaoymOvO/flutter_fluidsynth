@@ -1,9 +1,42 @@
 import 'dart:async';
+import 'dart:io' show Platform, stderr;
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../i18n/i18n_service.dart';
 import 'fluidsynth_service.dart';
+
+/// Diagnostic logger for media-control registration.
+///
+/// Two Flutter behaviours have to be worked around here, because these lines are
+/// the primary evidence when the system media controls do not register:
+///
+///  * On Android the engine maps `print` onto `debugPrint`, which is
+///    rate-limited (it silently drops output past a few lines per second), so a
+///    long stack trace would be truncated exactly when it matters.
+///  * `debugPrint` is itself a hook (`debugPrintOverride`) that tests and
+///    debuggers replace, so depending on it alone can lose output.
+///
+/// `dart:io`'s `stderr` bypasses both wrappers, and the engine forwards it to
+/// the platform log in every build mode. `debugPrint` is still emitted in debug
+/// builds so the lines surface in the IDE console, but the `stderr` copy is
+/// always written. Filter device logs with:
+///
+///   adb logcat | Select-String "SynthBoxMedia"
+void _mediaLog(String message) {
+  if (kDebugMode) {
+    debugPrint('[SynthBoxMedia] $message');
+  }
+  stderr.writeln('[SynthBoxMedia] $message');
+}
+
+/// Whether the Android 13+ notification permission was observed to be granted.
+///
+/// When false, the foreground media service still starts but the system silently
+/// drops its notification, and Android 11+ derives the Quick Settings media card
+/// from that notification — so the media controls never appear. Read by the
+/// settings screen to warn the user.
+bool androidNotificationPermissionGranted = true;
 
 /// Bridges FluidSynthService to the operating system media controls (Windows SMTC,
 /// Android MediaSession & Foreground Service, iOS/macOS Now Playing Info Center).
@@ -13,11 +46,53 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
   String? _lastTrackPath;
   String? _lastSfName;
   int _lastTotalTicks = -1;
+  int _lastDurationMs = -1;
+
+  /// Last progress tick already forwarded to the platform, in seconds.
+  int _lastPushedPositionSecond = -1;
 
   FluidAudioHandler(this.fluidService, {this.i18nService}) {
     fluidService.addListener(_syncState);
     i18nService?.addListener(_syncState);
+
+    // FluidSynthService deliberately updates `progressNotifier` (not
+    // `notifyListeners`) on every 100 ms playback tick, so that unrelated UI is
+    // not rebuilt. The system media card reads its position from PlaybackState
+    // though, and PlaybackState is only pushed on notifyListeners — so without
+    // this subscription the card's seek bar receives one position at the moment
+    // playback starts and never advances. Re-publishing on the tick keeps the
+    // position correct on every ROM, including those that do not interpolate
+    // from speed + updateTime.
+    fluidService.progressNotifier.addListener(_onProgressTick);
+
     _syncState();
+  }
+
+  /// Forwards FluidSynth progress ticks to the platform as PlaybackState.
+  ///
+  /// Throttled to one push per whole second: the service ticks every 100 ms but
+  /// the media card's seek bar has 1 s resolution, so 10x the channel traffic
+  /// would buy nothing visible.
+  void _onProgressTick() {
+    // Tactical throttle: the tick is 100 ms, the seek bar has 1 s resolution.
+    final second = fluidService.currentTimeInSeconds.floor();
+    if (second == _lastPushedPositionSecond) return;
+    _lastPushedPositionSecond = second;
+    _syncState();
+  }
+
+  /// Best available track duration in milliseconds, or 0 when unknown.
+  ///
+  /// [FluidSynthService.totalTimeInSeconds] is derived from the tempo map and
+  /// the player's `totalTicks`. Both are 0 until FluidSynth has the file loaded,
+  /// so fall back to the elapsed position — a non-zero duration keeps
+  /// METADATA_KEY_DURATION present, which is what the media card's seek bar
+  /// needs in order to render at all.
+  int _resolveDurationMs() {
+    final totalMs = (fluidService.totalTimeInSeconds * 1000).toInt();
+    if (totalMs > 0) return totalMs;
+    final elapsedMs = (fluidService.currentTimeInSeconds * 1000).toInt();
+    return elapsedMs > 0 ? elapsedMs : 0;
   }
 
   void _syncState() {
@@ -30,15 +105,26 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
       final sfName = fluidService.loadedSfName ?? 'SoundFont';
       final totalTicks = fluidService.totalTicks;
 
-      // Update metadata when track or soundfont changes
+      // Android draws the media card's seek bar from
+      // MediaMetadataCompat.METADATA_KEY_DURATION, and audio_service only writes
+      // that key when MediaItem.duration is non-null. A missing key means no
+      // seek bar at all, so derive a duration from whatever the service knows
+      // rather than publishing null.
+      final durationMs = _resolveDurationMs();
+
+      // Update metadata when track, soundfont or duration changes. Duration is
+      // part of the signature because FluidSynth reports totalTicks only once
+      // the player is running, so the first push of a track often carries
+      // duration 0 and must be repaired by a later one.
       if (_lastTrackPath != currentPath ||
           _lastSfName != sfName ||
-          _lastTotalTicks != totalTicks) {
+          _lastTotalTicks != totalTicks ||
+          _lastDurationMs != durationMs) {
         _lastTrackPath = currentPath;
         _lastSfName = sfName;
         _lastTotalTicks = totalTicks;
+        _lastDurationMs = durationMs;
 
-        final durationMs = (fluidService.totalTimeInSeconds * 1000).toInt();
         final item = MediaItem(
           id: currentPath,
           album: sfName,
@@ -47,12 +133,18 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
           duration: durationMs > 0 ? Duration(milliseconds: durationMs) : null,
         );
         mediaItem.add(item);
+        _mediaLog(
+          'mediaItem -> "${item.title}" album=$sfName '
+          'duration=${item.duration} (totalTicks=$totalTicks)',
+        );
       }
     } else if (isStopped && mediaItem.value != null) {
       _lastTrackPath = null;
       _lastSfName = null;
       _lastTotalTicks = -1;
+      _lastDurationMs = -1;
       mediaItem.add(null);
+      _mediaLog('mediaItem -> null (playback stopped)');
     }
 
     // 2. Synchronize PlaybackState
@@ -99,6 +191,25 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
         .toInt();
     final totalDurationMs = (fluidService.totalTimeInSeconds * 1000).toInt();
 
+    // IMPORTANT — MediaSession lifetime.
+    //
+    // `AudioProcessingState.idle` does NOT mean "playback stopped", it means
+    // "this app no longer has a media session". On the native side, sending
+    // `idle` after any non-idle state calls AudioService.stop(), which runs
+    // deactivateMediaSession(): mediaSession.setActive(false) plus
+    // NotificationManager.cancel(). Android 11+ renders the Quick Settings and
+    // lock screen media card only for an ACTIVE MediaSession backed by a live
+    // MediaStyle notification, so every `idle` we send tears the system media
+    // controls down.
+    //
+    // A stopped-but-loaded track must therefore stay `ready` with
+    // `playing: false`. Report `idle` only when nothing is loaded at all, which
+    // is the one case where releasing the session is correct.
+    final hasContent = currentPath != null;
+    final processingState = hasContent
+        ? AudioProcessingState.ready
+        : AudioProcessingState.idle;
+
     playbackState.add(
       PlaybackState(
         controls: controls,
@@ -110,9 +221,7 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
           MediaAction.setRepeatMode,
         },
         androidCompactActionIndices: const [0, 1, 2],
-        processingState: isStopped
-            ? AudioProcessingState.idle
-            : AudioProcessingState.ready,
+        processingState: processingState,
         playing: isPlaying,
         updatePosition: Duration(
           milliseconds: currentPositionMs.clamp(
@@ -136,10 +245,25 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
             : AudioServiceShuffleMode.none,
       ),
     );
+
+    // Trace every state pushed to the platform layer. This is the line that
+    // decides whether the native AudioService activates the MediaSession
+    // (`playing` false -> true) and whether it stays parked at `idle` (which
+    // makes it release the session and cancel the notification instead).
+    // position/duration are included because a null duration drops
+    // METADATA_KEY_DURATION on the native side, which removes the media card's
+    // seek bar entirely.
+    _mediaLog(
+      'playbackState -> processing=$processingState playing=$isPlaying '
+      'controls=${controls.length} compact=[0,1,2] '
+      'pos=${currentPositionMs}ms dur=${totalDurationMs}ms speed='
+      '${isPlaying ? 1.0 : 0.0} track=${currentPath ?? "none"}',
+    );
   }
 
   @override
   Future<void> play() async {
+    _mediaLog('handler.play() called');
     if (fluidService.isPaused) {
       fluidService.resume();
     } else if (fluidService.currentMidiPath != null) {
@@ -154,11 +278,13 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> pause() async {
+    _mediaLog('handler.pause() called');
     fluidService.pause();
   }
 
   @override
   Future<void> stop() async {
+    _mediaLog('handler.stop() called');
     fluidService.stop();
   }
 
@@ -238,37 +364,92 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> onTaskRemoved() async {
+    // Note: this fires when the user swipes the app out of Recents, not when
+    // playback ends. Stopping here means background playback cannot outlive the
+    // task, which is why a swipe in Recents also removes the system media card.
+    _mediaLog('handler.onTaskRemoved() called - stopping playback');
     fluidService.stop();
   }
 }
 
+/// Ensures the Android 13+ notification permission is resolved *before* the
+/// media service starts.
+///
+/// The foreground service may start without this permission, but the system then
+/// suppresses its notification — and Android 11+ builds the Quick Settings media
+/// card from that notification. A denied permission is therefore
+/// indistinguishable from "the media controls never register".
+Future<void> _ensureAndroidNotificationPermission() async {
+  if (kIsWeb || !Platform.isAndroid) return;
+
+  try {
+    var status = await Permission.notification.status;
+    if (!status.isGranted) {
+      _mediaLog('POST_NOTIFICATIONS not granted ($status) - requesting');
+      status = await Permission.notification.request();
+    }
+    androidNotificationPermissionGranted = status.isGranted;
+    _mediaLog(
+      'POST_NOTIFICATIONS status=$status granted=$androidNotificationPermissionGranted',
+    );
+    if (!androidNotificationPermissionGranted) {
+      _mediaLog(
+        'WARNING: notifications denied. The Android media card is derived from '
+        'the media notification and will NOT appear until notifications are '
+        'enabled for this app in system settings.',
+      );
+    }
+  } catch (e) {
+    _mediaLog('POST_NOTIFICATIONS check failed: $e');
+  }
+}
+
 /// Initializes the global AudioService across platforms (Android, iOS, macOS, Windows).
+///
+/// Returns null when initialization fails. Failures are logged loudly, because a
+/// silent failure here is exactly what "the system media controls never appear"
+/// looks like from the outside.
 Future<AudioHandler?> initAudioService(
   FluidSynthService fluidService, {
   I18nService? i18nService,
 }) async {
   try {
-    // Request notification permission asynchronously in background without blocking AudioService.init
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      Permission.notification.request().catchError((e) {
-        debugPrint('Notification permission error: $e');
-        return PermissionStatus.denied;
-      });
-    }
+    _mediaLog(
+      'initAudioService() begin (platform=$defaultTargetPlatform)',
+    );
+    await _ensureAndroidNotificationPermission();
 
-    return await AudioService.init(
+    final handler = await AudioService.init(
       builder: () => FluidAudioHandler(fluidService, i18nService: i18nService),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'io.github.zhaoymovo.ffs.audio',
         androidNotificationChannelName: 'SynthBox Playback',
         androidNotificationChannelDescription: 'SynthBox playback controls',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: true,
-        androidNotificationIcon: 'mipmap/ic_launcher',
+        // Keep the media session alive while paused. With this set to true the
+        // foreground service — and with it the Android 11+ media card — is torn
+        // down on every pause, which makes registration look intermittent.
+        //
+        // androidNotificationOngoing must stay false: AudioServiceConfig asserts
+        // `!androidNotificationOngoing || androidStopForegroundOnPause`, so the
+        // two flags cannot be combined. Ongoing only matters while the service
+        // is foregrounded, and a foreground service already forces its
+        // notification to be non-dismissable.
+        androidStopForegroundOnPause: false,
+        androidNotificationOngoing: false,
+        // Must be a flat monochrome silhouette. The colorised launcher icon is
+        // rendered as an opaque blob or dropped entirely by several ROMs.
+        androidNotificationIcon: 'drawable/ic_stat_synthbox',
       ),
     );
-  } catch (e) {
-    debugPrint('AudioService init exception: $e');
+
+    _mediaLog(
+      'AudioService.init OK - media session registered '
+      '(platform=$defaultTargetPlatform)',
+    );
+    return handler;
+  } catch (e, st) {
+    _mediaLog('AudioService.init FAILED: $e');
+    _mediaLog('$st');
     return null;
   }
 }
