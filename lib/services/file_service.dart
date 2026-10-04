@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
@@ -80,32 +81,40 @@ class FileService extends ChangeNotifier {
     return parent != _currentDirectoryPath && parent.isNotEmpty;
   }
 
-  /// Request storage / home directory permissions
+  /// Request storage / home directory permissions.
+  ///
+  /// Only ONE permission UI may be in flight at a time, which is why the
+  /// notification permission is NOT requested here — it is issued first by
+  /// [_requestStartupPermissions] and only *read* by the media service (see
+  /// audio_handler.dart). When two requesters raced, the loser's UI was silently
+  /// dropped; because "All files access" is a system *settings* screen rather
+  /// than a dialog it lost that race, so the storage grant never landed and the
+  /// first file listing failed until the app was restarted.
   Future<bool> requestStoragePermissions() async {
     if (Platform.isAndroid) {
       var status = await Permission.storage.status;
       if (!status.isGranted) {
         status = await Permission.storage.request();
       }
+      debugPrint('[SynthBoxPerm] legacy storage -> $status');
 
       if (await Permission.manageExternalStorage.isRestricted) {
-        // Ignored if restricted
+        debugPrint('[SynthBoxPerm] manageExternalStorage is restricted');
       } else {
         var manageStatus = await Permission.manageExternalStorage.status;
         if (!manageStatus.isGranted) {
-          await Permission.manageExternalStorage.request();
+          debugPrint(
+            '[SynthBoxPerm] manageExternalStorage=$manageStatus - opening the '
+            'system "All files access" screen',
+          );
+          manageStatus = await Permission.manageExternalStorage.request();
         }
+        debugPrint('[SynthBoxPerm] manageExternalStorage -> $manageStatus');
       }
 
-      try {
-        final notifStatus = await Permission.notification.status;
-        if (!notifStatus.isGranted) {
-          await Permission.notification.request();
-        }
-      } catch (e) {
-        debugPrint('Notification permission check error: $e');
-      }
-
+      // Either grant unlocks the file browser: "All files access" on Android 11+
+      // (where the legacy permission is hard-denied), READ/WRITE_EXTERNAL_STORAGE
+      // on older releases (where manageExternalStorage always reports denied).
       _permissionGranted =
           status.isGranted || await Permission.manageExternalStorage.isGranted;
     } else {
@@ -113,6 +122,7 @@ class FileService extends ChangeNotifier {
       _permissionGranted = true;
     }
 
+    debugPrint('[SynthBoxPerm] permissionGranted=$_permissionGranted');
     notifyListeners();
     return _permissionGranted;
   }
@@ -149,12 +159,59 @@ class FileService extends ChangeNotifier {
     return docDir.path;
   }
 
-  /// Initialize file service: request permission, resolve home dir, list filtered files
+  /// Initialize file service: request permission, resolve home dir, list filtered files.
+  ///
+  /// This is the single owner of the startup permission prompts, and it does not
+  /// block the first listing on them: `MANAGE_EXTERNAL_STORAGE` opens a system
+  /// settings screen that the user may sit on indefinitely.
   Future<void> initialize() async {
-    await requestStoragePermissions();
+    if (Platform.isAndroid) {
+      unawaited(_requestStartupPermissions());
+    } else {
+      await requestStoragePermissions();
+    }
     _homeDirectoryPath = await resolveHomeDirectory();
     _currentDirectoryPath = _homeDirectoryPath;
     await scanCurrentDirectory();
+  }
+
+  /// Requests the startup permission set, in the only order that works.
+  ///
+  /// The notification permission is a normal runtime dialog; "All files access"
+  /// is a system *settings* screen. A dialog and a settings screen cannot be
+  /// requested concurrently — whichever is issued second is silently dropped.
+  /// So the dialog goes first and is awaited, then the settings screen is
+  /// launched, and this future intentionally never completes within
+  /// [initialize]'s critical path.
+  Future<void> _requestStartupPermissions() async {
+    await _requestNotificationPermission();
+    await requestStoragePermissions();
+
+    // The user had to leave for the "All files access" screen, so the directory
+    // listing performed by [initialize] ran before the grant landed and came
+    // back empty. Redo it now that storage is readable; without this the browser
+    // stays empty until the app restarts.
+    if (_permissionGranted) {
+      debugPrint('[SynthBoxPerm] storage usable - rescanning directory');
+      await scanCurrentDirectory();
+    }
+  }
+
+  /// Asks for the Android 13+ notification permission.
+  ///
+  /// Owned here rather than by the media service so that exactly one component
+  /// requests it; `audio_handler.dart` only reads the resulting status.
+  Future<void> _requestNotificationPermission() async {
+    try {
+      var status = await Permission.notification.status;
+      if (!status.isGranted) {
+        debugPrint('[SynthBoxPerm] notification=$status - requesting');
+        status = await Permission.notification.request();
+      }
+      debugPrint('[SynthBoxPerm] notification -> $status');
+    } catch (e) {
+      debugPrint('[SynthBoxPerm] notification request failed: $e');
+    }
   }
 
   /// Scans the directory, filtering ONLY MIDI and SoundFont files, excluding everything else!

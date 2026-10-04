@@ -57,11 +57,19 @@ void _initServicesAsync(
   FileService fileService,
   I18nService i18nService,
 ) async {
-  // Initialize system media controls immediately (Windows SMTC, Android MediaSession & Foreground Service, iOS/macOS Now Playing)
-  initAudioService(fluidService, i18nService: i18nService);
+  // Permission requests MUST NOT overlap. Only one permission UI can run at a
+  // time: the Android 13+ notification prompt is a runtime dialog, while "All
+  // files access" (MANAGE_EXTERNAL_STORAGE) launches a system *settings* screen.
+  // When both are in flight the settings screen is dropped, the storage grant
+  // never lands, and the first file listing fails until the app is restarted.
+  //
+  // Storage/文件存取 is therefore resolved first and awaited, because the file
+  // browser is the app's primary surface.
+  await fileService.initialize();
 
-  // Scan home directory in background (fileService notifies listeners when complete)
-  fileService.initialize();
+  // Media controls second: this only needs to *read* the notification
+  // permission, and only after the storage UI has settled.
+  await initAudioService(fluidService, i18nService: i18nService);
 
   // Initialize FluidSynth engine & load active SoundFont in background
   await fluidService.initialize();

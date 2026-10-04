@@ -372,31 +372,33 @@ class FluidAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 }
 
-/// Ensures the Android 13+ notification permission is resolved *before* the
-/// media service starts.
+/// Reads the Android 13+ notification permission *before* the media service
+/// starts.
 ///
 /// The foreground service may start without this permission, but the system then
 /// suppresses its notification — and Android 11+ builds the Quick Settings media
 /// card from that notification. A denied permission is therefore
 /// indistinguishable from "the media controls never register".
+///
+/// This deliberately does NOT call `request()`. Only one permission UI can be in
+/// flight at a time, and the storage request ("All files access", a system
+/// settings screen rather than a dialog) is sequenced ahead of this call from
+/// `main.dart`. A second requester here made one of the two silently lose, which
+/// left the file browser without storage access on first launch.
 Future<void> _ensureAndroidNotificationPermission() async {
   if (kIsWeb || !Platform.isAndroid) return;
 
   try {
-    var status = await Permission.notification.status;
-    if (!status.isGranted) {
-      _mediaLog('POST_NOTIFICATIONS not granted ($status) - requesting');
-      status = await Permission.notification.request();
-    }
+    final status = await Permission.notification.status;
     androidNotificationPermissionGranted = status.isGranted;
     _mediaLog(
       'POST_NOTIFICATIONS status=$status granted=$androidNotificationPermissionGranted',
     );
     if (!androidNotificationPermissionGranted) {
       _mediaLog(
-        'WARNING: notifications denied. The Android media card is derived from '
-        'the media notification and will NOT appear until notifications are '
-        'enabled for this app in system settings.',
+        'WARNING: notifications not granted. The Android media card is derived '
+        'from the media notification and will NOT appear until notifications '
+        'are enabled for this app in system settings.',
       );
     }
   } catch (e) {
