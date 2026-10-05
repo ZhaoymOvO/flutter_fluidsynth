@@ -22,14 +22,14 @@ class SettingsPage extends StatelessWidget {
   });
 
   Future<void> _pickSoundFont(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['sf2', 'sf3', 'dls'],
       dialogTitle: context.tr('sf_btn_add_manual'),
     );
 
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    final path = file?.path;
+    if (path != null) {
       final added = await soundFontService.addAndActivateSoundFont(path);
       if (added && fluidService.isLibraryLoaded) {
         await fluidService.loadSoundFont(path);
@@ -49,14 +49,14 @@ class SettingsPage extends StatelessWidget {
   }
 
   Future<void> _sideloadLibrary(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['dylib', 'dll', 'so'],
       dialogTitle: context.tr('settings_lib_sideload_btn'),
     );
 
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    final path = file?.path;
+    if (path != null) {
       final success = await fluidService.sideloadLibrary(path);
       if (context.mounted) {
         if (success) {

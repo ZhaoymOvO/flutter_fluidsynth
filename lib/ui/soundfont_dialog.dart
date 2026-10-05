@@ -24,14 +24,14 @@ class SoundFontManagerPage extends StatelessWidget {
   }
 
   Future<void> _pickSoundFont(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['sf2', 'sf3', 'dls'],
       dialogTitle: context.tr('sf_btn_add_manual'),
     );
 
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    final path = file?.path;
+    if (path != null) {
       final added = await soundFontService.addAndActivateSoundFont(path);
       if (added && fluidService.isLibraryLoaded) {
         await fluidService.loadSoundFont(path);
