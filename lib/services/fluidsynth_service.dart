@@ -848,12 +848,12 @@ class FluidSynthService extends ChangeNotifier {
   }
 
   /// Reorder items in playlist
-  ///
-  /// [newIndex] must already be adjusted for the removal of the item at
-  /// [oldIndex], which is what `ReorderableListView.onReorderItem` provides.
   void reorderPlaylist(int oldIndex, int newIndex) {
     if (oldIndex < 0 || oldIndex >= _playlist.length) return;
-    if (newIndex < 0 || newIndex >= _playlist.length) return;
+    if (newIndex < 0 || newIndex > _playlist.length) return;
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
     final currentItem =
         (_playlistIndex >= 0 && _playlistIndex < _playlist.length)
         ? _playlist[_playlistIndex]

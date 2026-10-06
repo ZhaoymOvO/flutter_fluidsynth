@@ -114,7 +114,7 @@ class PlaylistSheet extends StatelessWidget {
                               : ReorderableListView.builder(
                                   buildDefaultDragHandles: false,
                                   itemCount: playlist.length,
-                                  onReorderItem: (oldIndex, newIndex) {
+                                  onReorder: (oldIndex, newIndex) {
                                     fluidService.reorderPlaylist(
                                       oldIndex,
                                       newIndex,
