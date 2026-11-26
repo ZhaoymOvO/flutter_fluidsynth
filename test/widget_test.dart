@@ -363,7 +363,7 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
         expect(service.playlist[service.playlistIndex], equals('/path/2.mid'));
 
         // Reorder item 0 to 3
-        service.reorderPlaylist(0, 4);
+        service.reorderPlaylist(0, 3);
         expect(service.playlist[service.playlistIndex], equals('/path/2.mid'));
 
         // Remove before current index

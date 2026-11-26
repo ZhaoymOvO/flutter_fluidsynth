@@ -847,13 +847,11 @@ class FluidSynthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reorder items in playlist
+  /// Reorder items in playlist using post-removal target index.
   void reorderPlaylist(int oldIndex, int newIndex) {
     if (oldIndex < 0 || oldIndex >= _playlist.length) return;
-    if (newIndex < 0 || newIndex > _playlist.length) return;
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
+    if (newIndex < 0 || newIndex >= _playlist.length) return;
+    if (oldIndex == newIndex) return;
     final currentItem =
         (_playlistIndex >= 0 && _playlistIndex < _playlist.length)
         ? _playlist[_playlistIndex]
