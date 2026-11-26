@@ -220,8 +220,8 @@ flowchart TB
 ### 下載專案與依賴
 
 ```bash
-git clone https://github.com/your-username/ffs.git
-cd ffs
+git clone https://github.com/ZhaoymOvO/flutter_fluidsynth.git
+cd flutter_fluidsynth
 flutter pub get
 ```
 

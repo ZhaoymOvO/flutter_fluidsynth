@@ -32,7 +32,7 @@ void main() {
       final i18n = I18nService();
 
       const sampleCsv = '''control_name,zh_TW,zh_CN,en,ja
-app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プレーヤー
+app_title,SynthBox,SynthBox,SynthBox,SynthBox
 common_ok,確定,确定,OK,確定
 
 home_title,家目錄音樂檔案,家目录音乐文件,Home Music Files,ホームの音楽ファイル
@@ -48,23 +48,23 @@ sf_manager_title,已知 SoundFont 清單,已知 SoundFont 列表,Known SoundFont
 
       // Test English
       await i18n.setLanguage('en');
-      expect(i18n.t('app_title'), 'FluidMIDI Player');
+      expect(i18n.t('app_title'), 'SynthBox');
       expect(i18n.t('home_title'), 'Home Music Files');
       expect(i18n.t('sf_manager_title'), 'Known SoundFonts');
 
       // Test Traditional Chinese
       await i18n.setLanguage('zh_TW');
-      expect(i18n.t('app_title'), 'FluidMIDI 播放器');
+      expect(i18n.t('app_title'), 'SynthBox');
       expect(i18n.t('home_title'), '家目錄音樂檔案');
 
       // Test Simplified Chinese
       await i18n.setLanguage('zh_CN');
-      expect(i18n.t('app_title'), 'FluidMIDI 播放器');
+      expect(i18n.t('app_title'), 'SynthBox');
       expect(i18n.t('home_title'), '家目录音乐文件');
 
       // Test Japanese
       await i18n.setLanguage('ja');
-      expect(i18n.t('app_title'), 'FluidMIDI プレーヤー');
+      expect(i18n.t('app_title'), 'SynthBox');
       expect(i18n.t('home_title'), 'ホームの音楽ファイル');
     });
 
@@ -918,7 +918,7 @@ settings_i18n_show_keys_desc,說明,说明,Desc,UIにCSVのcontrol_nameを表示
         SharedPreferences.setMockInitialValues({});
         final i18n = I18nService();
         i18n.parseCsvContent('''control_name,zh_TW,zh_CN,en,ja
-app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プレーヤー
+app_title,SynthBox,SynthBox,SynthBox,SynthBox
 ''');
         await i18n.setLanguage('en');
 
@@ -1150,7 +1150,7 @@ settings_language_label,介面語言,界面语言,Interface Language,言語
         SharedPreferences.setMockInitialValues({});
         final i18n = I18nService();
         i18n.parseCsvContent('''control_name,zh_TW,zh_CN,en,ja
-app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プレーヤー
+app_title,SynthBox,SynthBox,SynthBox,SynthBox
 ''');
         await i18n.setLanguage('zh_TW');
 
