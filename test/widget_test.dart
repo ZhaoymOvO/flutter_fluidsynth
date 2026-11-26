@@ -1145,7 +1145,7 @@ settings_language_label,介面語言,界面语言,Interface Language,言語
 
   group('Typography & Font Fallback Tests', () {
     testWidgets(
-      'FluidMidiApp applies GoogleSans as fontFamily and system fonts as fallback',
+      'FluidMidiApp applies GoogleSans as fontFamily with MiSans and system fonts as fallback',
       (tester) async {
         SharedPreferences.setMockInitialValues({});
         final i18n = I18nService();
@@ -1176,6 +1176,10 @@ app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プ
           equals('GoogleSans'),
         );
         expect(
+          materialApp.theme?.textTheme.bodyMedium?.fontFamilyFallback?.first,
+          equals('MiSans'),
+        );
+        expect(
           materialApp.theme?.textTheme.bodyMedium?.fontFamilyFallback,
           contains('PingFang TC'),
         );
@@ -1202,7 +1206,7 @@ app_title,FluidMIDI 播放器,FluidMIDI 播放器,FluidMIDI Player,FluidMIDI プ
               .bodyMedium
               ?.fontFamilyFallback
               ?.first,
-          equals('PingFang SC'),
+          equals('MiSans'),
         );
       },
     );

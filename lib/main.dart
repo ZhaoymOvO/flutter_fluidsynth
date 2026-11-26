@@ -212,6 +212,7 @@ List<String> _getFontFamilyFallback(String languageCode) {
 
   if (isJapanese) {
     return const [
+      'MiSans',
       'Hiragino Sans',
       'Hiragino Kaku Gothic ProN',
       'Yu Gothic',
@@ -226,6 +227,7 @@ List<String> _getFontFamilyFallback(String languageCode) {
 
   if (isHant) {
     return const [
+      'MiSans',
       'PingFang TC',
       'PingFang HK',
       'Microsoft JhengHei',
@@ -241,6 +243,7 @@ List<String> _getFontFamilyFallback(String languageCode) {
 
   // Simplified Chinese & general fallback
   return const [
+    'MiSans',
     'PingFang SC',
     'Microsoft YaHei',
     'Noto Sans CJK SC',

@@ -43,7 +43,7 @@ dependencies:
   path: ^1.9.0
   dynamic_color: ^1.7.0
   audio_service: ^0.18.19
-  audio_service_win: ^0.0.3
+  audio_service_win: ^0.1.0
 
 dev_dependencies:
   flutter_test:
@@ -81,3 +81,6 @@ flutter:
     - family: GoogleSans
       fonts:
         - asset: assets/fonts/GoogleSansVF.ttf
+    - family: MiSans
+      fonts:
+        - asset: assets/fonts/MiSans VF.ttf
