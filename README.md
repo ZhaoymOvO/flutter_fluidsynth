@@ -18,20 +18,32 @@
 
 ## 目錄 (Table of Contents)
 
-- [簡介 (Introduction)](#-簡介-introduction)
-- [功能特點 (Features)](#-功能特點-features)
-- [系統架構 (Architecture)](#-系統架構-architecture)
-- [支援格式 (Supported Formats)](#-支援格式-supported-formats)
-- [平台支援與動態庫配置 (Platform & Dynamic Library Setup)](#-平台支援與動態庫配置-platform--dynamic-library-setup)
-  - [Windows](#windows)
-  - [macOS](#macos)
-  - [Android](#android)
-  - [iOS](#ios)
-  - [Linux](#linux)
-- [快速開始與建置 (Getting Started & Building)](#-快速開始與建置-getting-started--building)
-- [實作細節與問題處理 (Implementation Details)](#-實作細節與問題處理-implementation-details)
-- [本地化與多語言 (Localization & i18n)](#-本地化與多語言-localization--i18n)
-- [授權協議 (License)](#-授權協議-license)
+- [SynthBox (FFS)](#synthbox-ffs)
+  - [目錄 (Table of Contents)](#目錄-table-of-contents)
+  - [簡介 (Introduction)](#簡介-introduction)
+  - [功能特點 (Features)](#功能特點-features)
+    - [音訊合成與動態庫支援](#音訊合成與動態庫支援)
+    - [SoundFont 音色庫管理](#soundfont-音色庫管理)
+    - [時間軸與 MIDI 解析](#時間軸與-midi-解析)
+    - [系統媒體控制整合](#系統媒體控制整合)
+    - [檔案瀏覽與儲存路徑](#檔案瀏覽與儲存路徑)
+    - [Material 3 介面](#material-3-介面)
+  - [系統架構 (Architecture)](#系統架構-architecture)
+  - [支援格式 (Supported Formats)](#支援格式-supported-formats)
+  - [平台支援與動態庫配置 (Platform \& Dynamic Library Setup)](#平台支援與動態庫配置-platform--dynamic-library-setup)
+    - [Windows](#windows)
+    - [macOS](#macos)
+    - [Android](#android)
+    - [iOS](#ios)
+    - [Linux](#linux)
+  - [快速開始與建置 (Getting Started \& Building)](#快速開始與建置-getting-started--building)
+    - [前置環境](#前置環境)
+    - [下載專案與依賴](#下載專案與依賴)
+    - [執行與偵錯](#執行與偵錯)
+    - [打包編譯 (Release)](#打包編譯-release)
+  - [實作細節與問題處理 (Implementation Details)](#實作細節與問題處理-implementation-details)
+  - [🌐 本地化與多語言 (Localization \& i18n)](#-本地化與多語言-localization--i18n)
+  - [授權協議 (License)](#授權協議-license)
 
 ---
 
@@ -46,6 +58,7 @@
 ## 功能特點 (Features)
 
 ### 音訊合成與動態庫支援
+
 - **FluidSynth 核心**：透過 FFI 直接調用原生 C 函式庫進行即時音訊合成。
 - **音訊驅動切換**：
   - **Windows**：WASAPI、DirectSound、WaveOut、PortAudio
@@ -55,22 +68,26 @@
 - **動態庫旁加載 (Sideloading)**：在設定頁面中支援直接選取本機的 `.dll`、`.dylib` 或 `.so`，方便測試不同版本編譯的 FluidSynth 庫。
 
 ### SoundFont 音色庫管理
+
 - 支援標準 `.sf2`、OGG 壓縮格式 `.sf3` 以及 `.dls` 音色庫。
 - **歷史清單**：自動記錄曾載入過的 SoundFont，方便隨時切換。
 - **即時切換音色**：播放中更換 SoundFont 會自動先靜音當前發聲、載入新音色庫並自動定位回當前進度繼續播放。
 
 ### 時間軸與 MIDI 解析
+
 - **輕量 SMF 解析模組 (`midi_parser.dart`)**：針對 Standard MIDI File (Format 0 & Format 1) 進行基本結構解析。
 - **Tempo 映射計算**：讀取 MIDI 中的變速事件（Set Tempo Meta-Events）與 PPQ Division 建立對照表，使變速曲目的進度條拖動與播放秒數換算更準確。
 - **獨立進度通知 (`progressNotifier`)**：將每 100ms 的進度條更新抽離出全域狀態，避免播放時觸發整頁無謂的重新構建（Rebuild）。
 
 ### 系統媒體控制整合
+
 - **Windows SMTC**：適配 Windows 系統媒體控制列，支援鍵盤媒體播放/暫停/切歌快捷鍵。
 - **Android 前台服務 & MediaSession**：支援通知欄 MediaStyle 控制、鎖定螢幕媒體介面與後台背景播放。
 - **iOS / macOS Now Playing**：支援系統控制中心與選單列的媒體資訊顯示與控制。
 - **播放列表模式**：支援單曲循環、列表循環、順序播放、隨機播放、下一首播放以及清單拖曳排序。
 
 ### 檔案瀏覽與儲存路徑
+
 - **格式自動過濾**：瀏覽目錄時僅列出資料夾、MIDI 檔案及 SoundFont 檔案，簡化尋找流程。
 - **各平台路徑適配**：
   - Windows：提供「本機 (This PC)」磁碟機列表（C:\、D:\ 等分區）。
@@ -79,6 +96,7 @@
   - Android：適配 `/storage/emulated/0` 與外接記憶卡存取。
 
 ### Material 3 介面
+
 - **動態取色 (Dynamic Color)**：支援 Android 12+ 與桌面系統的動態配色（Material You）。
 - **響應式排版**：針對手機直式螢幕與桌面寬螢幕提供適當的佈局切換。
 - **背景初始化**：啟動時將音訊核心與檔案掃描交由背景非同步載入，減少啟動等待時間。
@@ -143,37 +161,49 @@ flowchart TB
 本專案底層依賴原生 FluidSynth 動態庫，各平台配置情況如下：
 
 ### Windows
+
 - **內建打包**：專案在 `windows/CMakeLists.txt` 已配置打包 `libfluidsynth-3.dll`、`SDL3.dll` 與 `sndfile.dll`，編譯後會自動複製到執行檔旁。
 - **環境搜尋**：若未找到，會依序尋找常見路徑（MSYS2、vcpkg、`C:\Program Files\FluidSynth\bin` 等）。
 - **手動載入**：也可以在「設定」中手動指定任意資料夾中的 `libfluidsynth-3.dll`。
 
 ### macOS
+
 - **建議透過 Homebrew 安裝**：
+
   ```bash
   brew install fluidsynth
   ```
+
   程式會自動尋找 `/opt/homebrew/lib/libfluidsynth.dylib` 或 `/usr/local/lib/libfluidsynth.dylib`。
 - **手動指定**：如有自行編譯的庫，可在設定頁面中手動選取 `.dylib`。
 
 ### Android
+
 - **內建各架構庫**：`android/app/src/main/jniLibs` 已附帶 **arm64-v8a**、**armeabi-v7a**、**x86**、**x86_64** 的預編譯庫（包含 `libfluidsynth.so`、`liboboe.so` 等）。
 - **權限需求**：需要檔案存取權限以讀取儲存空間內的 MIDI/SF2 檔案，以及通知權限以維持背景播放與鎖定螢幕控制。
 
 ### iOS
+
 - **Framework 整合**：專案目錄包含 `FluidSynth.xcframework`，可透過 `DynamicLibrary.process()` 調用。
 
 ### Linux
+
 - **安裝系統庫**：
   - Ubuntu / Debian:
+
     ```bash
     sudo apt update
     sudo apt install libfluidsynth3 libfluidsynth-dev
     ```
+
   - Arch Linux:
+
     ```bash
     sudo pacman -S fluidsynth
     ```
-  - Fedora:
+
+  - Fedora / openSUSE:
+
     ```bash
     sudo dnf install fluidsynth fluidsynth-devel
     ```
@@ -183,10 +213,12 @@ flowchart TB
 ## 快速開始與建置 (Getting Started & Building)
 
 ### 前置環境
+
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (`^3.x`，Dart `^3.11+`)
 - 目標平台的編譯工具（Visual Studio C++ / Xcode / Android Studio / Clang 等）
 
 ### 下載專案與依賴
+
 ```bash
 git clone https://github.com/your-username/ffs.git
 cd ffs
@@ -194,6 +226,7 @@ flutter pub get
 ```
 
 ### 執行與偵錯
+
 ```bash
 # 桌面端 (Windows / macOS / Linux)
 flutter run -d windows
@@ -205,6 +238,7 @@ flutter run -d <device_id>
 ```
 
 ### 打包編譯 (Release)
+
 ```bash
 # Windows
 flutter build windows --release
@@ -242,6 +276,7 @@ flutter build ipa --release
 ## 🌐 本地化與多語言 (Localization & i18n)
 
 目前支援以下語言：
+
 - **繁體中文** (`zh_TW`)
 - **簡體中文** (`zh_CN`)
 - **English** (`en`)
