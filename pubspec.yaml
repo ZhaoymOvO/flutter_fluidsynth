@@ -41,10 +41,10 @@ dependencies:
   shared_preferences: ^2.2.3
   csv: ^6.0.0
   path: ^1.9.0
-  dynamic_color: ^1.7.0
+  dynamic_color: ^2.1.0
   audio_service: ^0.18.19
   audio_service_win: ^0.1.0
-
+  material_ui: ^1.11.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

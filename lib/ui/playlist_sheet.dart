@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import '../i18n/i18n_service.dart';
 import '../services/fluidsynth_service.dart';
